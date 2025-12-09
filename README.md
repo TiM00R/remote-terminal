@@ -53,6 +53,12 @@ Remote Terminal provides a **fully interactive terminal window** in your browser
 
 **The key advantage:** You maintain complete visibility and control. Every command Claude runs appears in your terminal window in real-time. You're never in the dark about what's happening on your server - it's like sitting side-by-side with an assistant who types commands for you while you watch the screen.
 
+#### 🎬 See It In Action
+
+https://github.com/TiM00R/remote-terminal/assets/demo.mp4
+
+*Watch the interactive web terminal in action - see Claude execute commands while you maintain full visibility and control*
+
 ### The Dual-Stream Architecture
 
 Behind the scenes, Remote Terminal uses a smart two-stream approach:
