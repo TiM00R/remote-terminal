@@ -60,6 +60,8 @@ Remote Terminal provides a **fully interactive terminal window** in your browser
   Your browser does not support the video tag.
 </video>
 
+https://github.com/user-attachments/assets/98a6fa41-ec4f-410b-8d4a-a2422d8ac7c9
+
 *Watch the interactive web terminal in action - see Claude execute commands while you maintain full visibility and control*
 
 ### The Dual-Stream Architecture
