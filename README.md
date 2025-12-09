@@ -93,14 +93,25 @@ Behind the scenes, Remote Terminal uses a smart two-stream approach:
 
 ### 1. Install
 
-```powershell
-cd D:\Projects\remote_terminal
+**Create a folder for the project** (location doesn't matter - use any path you prefer):
 
-# Create virtual environment
+Examples: `D:\Projects\remote_terminal` or `C:\MyMCPProj\remote_terminal`
+
+**Navigate to parent folder:**
+```
+cd D:\Projects
+```
+
+**Clone the repository:**
+```
+git clone https://github.com/TiM00R/remote-terminal.git
+cd remote_terminal
+```
+
+**Set up Python environment:**
+```
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-
-# Install dependencies
 pip install -r requirements.txt
 pip install mcp
 ```
@@ -108,7 +119,6 @@ pip install mcp
 ### 2. Configure Your Server
 
 Edit `hosts.yaml`:
-
 ```yaml
 servers:
   - name: my-server
@@ -122,7 +132,6 @@ servers:
 ### 3. Configure Claude Desktop
 
 Edit `%APPDATA%\Claude\claude_desktop_config.json`:
-
 ```json
 {
   "mcpServers": {
@@ -148,7 +157,7 @@ Execute the command 'whoami' on my server
 
 **Interactive terminal opens automatically** → Type or watch commands execute → Claude responds!
 
----
+------
 
 ## 📖 Documentation
 
@@ -347,32 +356,9 @@ servers:
 - Passwords stored in plain text in `hosts.yaml`
 - Web terminal bound to localhost only (not network-exposed)
 - Full command audit trail in database
-- SSH uses standard security (keys supported)
+- SSH uses standard security (password authentication)
 
-### Recommendations for Production
-
-1. **Use SSH keys instead of passwords**
-   ```yaml
-   key_file: C:\Users\You\.ssh\id_ed25519
-   ```
-
-2. **Protect configuration files**
-   - Keep `hosts.yaml` secure
-   - Consider encrypted storage
-   - Use file system permissions
-
-3. **Implement sudo with NOPASSWD**
-   ```bash
-   # On remote server
-   username ALL=(ALL) NOPASSWD: ALL
-   ```
-
-4. **Regular security audits**
-   - Review database command history
-   - Monitor access patterns
-   - Keep software updated
-
----
+------
 
 ## 📊 Performance
 
@@ -444,83 +430,26 @@ Each server tracked by unique machine_id (hardware + OS fingerprint):
 - Audit trail maintains integrity
 - Handles server IP changes
 
-### Database Schema
-
-```sql
--- Machine fingerprints
-CREATE TABLE machines (
-    id INTEGER PRIMARY KEY,
-    machine_id TEXT UNIQUE,
-    hostname TEXT,
-    first_seen TIMESTAMP,
-    last_seen TIMESTAMP
-);
-
--- Command history
-CREATE TABLE commands (
-    id INTEGER PRIMARY KEY,
-    machine_id INTEGER,
-    conversation_id INTEGER,
-    command_text TEXT,
-    result_output TEXT,
-    timestamp TIMESTAMP,
-    FOREIGN KEY (machine_id) REFERENCES machines(id)
-);
-
--- Conversations
-CREATE TABLE conversations (
-    id INTEGER PRIMARY KEY,
-    machine_id INTEGER,
-    goal_summary TEXT,
-    status TEXT,
-    created_at TIMESTAMP
-);
-
--- Recipes
-CREATE TABLE recipes (
-    id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE,
-    description TEXT,
-    created_from_conversation INTEGER,
-    times_used INTEGER DEFAULT 0
-);
-```
-
 ---
 
 ## 🐛 Known Issues & Limitations
 
 ### Current Limitations
 
-1. **SSH Key Support**
-   - Keys work with manual SSH
-   - Not yet fully integrated with MCP tools
-   - Password authentication primary method
-
-2. **Windows Only**
-   - Designed for Windows local machine
+1. **Designed for Windows local machine**
+   - Currently optimized for Windows 10/11
    - Linux/Mac support possible with modifications
 
-3. **Single User**
-   - One user per installation
-   - Multi-user support not implemented
+2. **SSH Key Support not implemented**
+   - Password authentication only
+   - SSH keys work with manual SSH but not integrated with MCP tools
 
-4. **Database Locking**
-   - Only one MCP server instance should run
-   - Multiple Claude instances share same DB
+3. **Works with only one remote server at a time**
+   - Can configure multiple servers
+   - Can only actively work with one server per session
+   - Switch between servers as needed
 
-### Planned Enhancements
-
-- [ ] Full SSH key integration with MCP tools
-- [ ] Multi-user support with authentication
-- [ ] Linux/Mac local machine support
-- [ ] Remote database option (PostgreSQL)
-- [ ] Enhanced recipe templating
-- [ ] Scheduled command execution
-- [ ] Email/webhook notifications
-- [ ] Graphical recipe editor
-
----
+------
 
 ## 🤝 Contributing
 
