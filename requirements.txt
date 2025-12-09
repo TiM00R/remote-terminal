@@ -1,0 +1,30 @@
+# Remote Terminal - Python Dependencies
+
+# Web UI Framework
+nicegui>=1.4.0
+
+# SSH Client
+paramiko>=3.0.0
+
+# Configuration
+pyyaml>=6.0
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Async I/O
+aiofiles>=23.0.0
+
+# Data Classes (Python 3.7+ has built-in, but explicit for clarity)
+dataclasses>=0.6; python_version < '3.7'
+
+# Logging
+python-json-logger>=2.0.0
+
+# MCP (Model Context Protocol) for Claude integration
+mcp>=1.0.0
+
+# Database (Phase 1: Command History & Rollback)
+
+# Optional: For enhanced terminal features
+# pyperclip>=1.8.0  # Clipboard support

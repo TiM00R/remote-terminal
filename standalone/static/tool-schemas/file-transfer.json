@@ -1,0 +1,234 @@
+{
+  "category": "File Transfer",
+  "tools": [
+    {
+      "name": "upload_file",
+      "description": "Upload single file via SFTP",
+      "arguments": [
+        {
+          "name": "local_path",
+          "type": "file_picker",
+          "required": true,
+          "label": "Local File Path",
+          "placeholder": "C:\\Users\\Tim\\file.txt"
+        },
+        {
+          "name": "remote_path",
+          "type": "text",
+          "required": true,
+          "label": "Remote File Path",
+          "placeholder": "/home/user/file.txt"
+        },
+        {
+          "name": "overwrite",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Overwrite if exists"
+        },
+        {
+          "name": "preserve_timestamp",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Preserve file timestamp"
+        },
+        {
+          "name": "chmod",
+          "type": "number",
+          "required": false,
+          "label": "Permissions (decimal, e.g., 420 for 0644)",
+          "placeholder": "420"
+        }
+      ]
+    },
+    {
+      "name": "download_file",
+      "description": "Download single file via SFTP",
+      "arguments": [
+        {
+          "name": "remote_path",
+          "type": "text",
+          "required": true,
+          "label": "Remote File Path",
+          "placeholder": "/home/user/file.txt"
+        },
+        {
+          "name": "local_path",
+          "type": "file_picker",
+          "required": true,
+          "label": "Local File Path",
+          "placeholder": "C:\\Users\\Tim\\file.txt"
+        },
+        {
+          "name": "overwrite",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Overwrite if exists"
+        },
+        {
+          "name": "preserve_timestamp",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Preserve file timestamp"
+        }
+      ]
+    },
+    {
+      "name": "upload_directory",
+      "description": "Upload entire directory with smart compression",
+      "arguments": [
+        {
+          "name": "local_path",
+          "type": "folder_picker",
+          "required": true,
+          "label": "Local Directory Path",
+          "placeholder": "C:\\Users\\Tim\\myproject"
+        },
+        {
+          "name": "remote_path",
+          "type": "text",
+          "required": true,
+          "label": "Remote Directory Path",
+          "placeholder": "/home/user/myproject"
+        },
+        {
+          "name": "compression",
+          "type": "select",
+          "required": false,
+          "default": "auto",
+          "label": "Compression",
+          "options": ["auto", "always", "never"]
+        },
+        {
+          "name": "exclude_patterns",
+          "type": "text",
+          "required": false,
+          "label": "Exclude Patterns (comma-separated)",
+          "placeholder": ".git,node_modules,__pycache__"
+        },
+        {
+          "name": "if_exists",
+          "type": "select",
+          "required": false,
+          "default": "merge",
+          "label": "If Exists",
+          "options": ["merge", "overwrite", "skip", "error"]
+        },
+        {
+          "name": "recursive",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Recursive (include subdirectories)"
+        },
+        {
+          "name": "preserve_timestamps",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Preserve timestamps"
+        }
+      ]
+    },
+    {
+      "name": "download_directory",
+      "description": "Download entire directory with smart compression",
+      "arguments": [
+        {
+          "name": "remote_path",
+          "type": "text",
+          "required": true,
+          "label": "Remote Directory Path",
+          "placeholder": "/home/user/myproject"
+        },
+        {
+          "name": "local_path",
+          "type": "folder_picker",
+          "required": true,
+          "label": "Local Directory Path",
+          "placeholder": "C:\\Users\\Tim\\myproject"
+        },
+        {
+          "name": "compression",
+          "type": "select",
+          "required": false,
+          "default": "auto",
+          "label": "Compression",
+          "options": ["auto", "always", "never"]
+        },
+        {
+          "name": "exclude_patterns",
+          "type": "text",
+          "required": false,
+          "label": "Exclude Patterns (comma-separated)",
+          "placeholder": ".git,node_modules,__pycache__"
+        },
+        {
+          "name": "if_exists",
+          "type": "select",
+          "required": false,
+          "default": "merge",
+          "label": "If Exists",
+          "options": ["merge", "overwrite", "skip", "error"]
+        },
+        {
+          "name": "recursive",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Recursive (include subdirectories)"
+        },
+        {
+          "name": "preserve_timestamps",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "label": "Preserve timestamps"
+        }
+      ]
+    },
+    {
+      "name": "list_remote_directory",
+      "description": "List contents of a remote directory",
+      "arguments": [
+        {
+          "name": "remote_path",
+          "type": "text",
+          "required": true,
+          "label": "Remote Directory Path",
+          "placeholder": "/home/user"
+        },
+        {
+          "name": "recursive",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Recursive (traverse subdirectories)"
+        },
+        {
+          "name": "show_hidden",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Show hidden files"
+        }
+      ]
+    },
+    {
+      "name": "get_remote_file_info",
+      "description": "Get detailed information about a remote file or directory",
+      "arguments": [
+        {
+          "name": "remote_path",
+          "type": "text",
+          "required": true,
+          "label": "Remote Path",
+          "placeholder": "/home/user/file.txt"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+# This directory will contain source code files during implementation phase
+
+# Planned files:
+# - __init__.py
+# - terminal_server.py
+# - ssh_manager.py
+# - history_manager.py
+# - output_buffer.py
+# - output_filter.py
+# - mcp_server.py
+# - config.py
+# - utils.py
+
+# See PROJECT_STRUCTURE.md for complete details

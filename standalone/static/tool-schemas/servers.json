@@ -1,0 +1,164 @@
+{
+  "category": "Servers",
+  "tools": [
+    {
+      "name": "list_servers",
+      "description": "Get all configured servers from hosts.yaml",
+      "arguments": []
+    },
+    {
+      "name": "get_current_server",
+      "description": "Get currently connected server information",
+      "arguments": []
+    },
+    {
+      "name": "add_server",
+      "description": "Add a new server configuration",
+      "arguments": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "label": "Server Name",
+          "placeholder": "my-server"
+        },
+        {
+          "name": "host",
+          "type": "text",
+          "required": true,
+          "label": "Host",
+          "placeholder": "192.168.1.100 or example.com"
+        },
+        {
+          "name": "user",
+          "type": "text",
+          "required": true,
+          "label": "Username",
+          "placeholder": "ubuntu"
+        },
+        {
+          "name": "password",
+          "type": "text",
+          "required": true,
+          "label": "Password",
+          "placeholder": "ssh password"
+        },
+        {
+          "name": "port",
+          "type": "number",
+          "required": false,
+          "default": 22,
+          "label": "Port",
+          "min": 1,
+          "max": 65535
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "label": "Description (optional)",
+          "placeholder": "Production web server"
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "required": false,
+          "label": "Tags (comma-separated)",
+          "placeholder": "production,critical"
+        }
+      ]
+    },
+    {
+      "name": "remove_server",
+      "description": "Remove a server configuration",
+      "special": "dynamic_server_select",
+      "arguments": [
+        {
+          "name": "identifier",
+          "type": "server_select_simple",
+          "required": true,
+          "label": "Select Server to Remove",
+          "placeholder": "Choose a server..."
+        }
+      ]
+    },
+    {
+      "name": "update_server",
+      "description": "Update an existing server configuration",
+      "special": "dynamic_server_update",
+      "arguments": [
+        {
+          "name": "identifier",
+          "type": "server_select",
+          "required": true,
+          "label": "Select Server to Update",
+          "placeholder": "Choose a server..."
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "label": "Server Name",
+          "placeholder": "new-server-name"
+        },
+        {
+          "name": "host",
+          "type": "text",
+          "required": false,
+          "label": "Host",
+          "placeholder": "192.168.1.200"
+        },
+        {
+          "name": "user",
+          "type": "text",
+          "required": false,
+          "label": "Username",
+          "placeholder": "admin"
+        },
+        {
+          "name": "password",
+          "type": "text",
+          "required": false,
+          "label": "Password",
+          "placeholder": "new password"
+        },
+        {
+          "name": "port",
+          "type": "number",
+          "required": false,
+          "label": "Port",
+          "min": 1,
+          "max": 65535
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "label": "Description",
+          "placeholder": "Updated description"
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "required": false,
+          "label": "Tags (comma-separated)",
+          "placeholder": "staging,backup"
+        }
+      ]
+    },
+    {
+      "name": "set_default_server",
+      "description": "Set default server for auto-connect on startup",
+      "special": "dynamic_server_select",
+      "arguments": [
+        {
+          "name": "identifier",
+          "type": "server_select_simple",
+          "required": true,
+          "label": "Select Default Server",
+          "placeholder": "Choose a server..."
+        }
+      ]
+    }
+  ]
+}

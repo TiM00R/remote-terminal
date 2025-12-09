@@ -1,0 +1,76 @@
+{
+  "category": "Batch Scripts",
+  "tools": [
+    {
+      "name": "execute_batch_script",
+      "description": "Run multi-command batch script with step tracking",
+      "arguments": [
+        {
+          "name": "script_content",
+          "type": "textarea",
+          "required": true,
+          "label": "Script Content",
+          "placeholder": "#!/bin/bash\necho \"Step 1\"\nls -la\necho \"Step 2\"\npwd",
+          "rows": 15
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "label": "Description",
+          "placeholder": "What this script does"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "default": 300,
+          "label": "Timeout (seconds)",
+          "min": 10,
+          "max": 3600
+        },
+        {
+          "name": "output_mode",
+          "type": "select",
+          "required": false,
+          "default": "summary",
+          "label": "Output Mode",
+          "options": ["summary", "full"]
+        }
+      ]
+    },
+    {
+      "name": "create_diagnostic_script",
+      "description": "Helper to build diagnostic script from command list",
+      "arguments": [
+        {
+          "name": "commands",
+          "type": "array",
+          "required": true,
+          "label": "Commands",
+          "item_fields": [
+            {
+              "name": "description",
+              "type": "text",
+              "label": "Description",
+              "placeholder": "Check network interfaces"
+            },
+            {
+              "name": "command",
+              "type": "text",
+              "label": "Command",
+              "placeholder": "ip link show"
+            }
+          ]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "default": "Diagnostics",
+          "label": "Overall Description"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Database - SENSITIVE (contains command history, server fingerprints)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.sqlite
+data/*.sqlite3
+data/backups/
+
+# Logs
+logs/
+*.log
+
+# Batch execution logs (may contain sensitive output)
+mcp_batch_logs/
+*.mcp_batch_logs/
+
+# SENSITIVE: Server credentials
+hosts.yaml
+
+# SENSITIVE: Claude Desktop config (may contain paths)
+claude_desktop_config.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Test files
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Virtual environments
+[Ee]nv/
+[Vv]env/
+ENV/
+env.bak/
+venv.bak/

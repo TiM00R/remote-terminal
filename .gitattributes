@@ -1,0 +1,34 @@
+# Default: Let Git auto-detect text files
+* text=auto
+
+# Source code files - normalize to LF in repository
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+
+# Shell scripts MUST use LF (will break on Linux with CRLF)
+*.sh text eol=lf
+
+# PowerShell/Windows scripts use CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files - never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.pyc binary
+*.so binary
+*.dll binary
+*.exe binary

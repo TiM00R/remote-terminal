@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "remote-terminal": {
+      "command": "D:\\Your-Proj\\remote_terminal\\.venv\\Scripts\\python.exe",
+        "args": [
+            "D:\\Your-Proj\\remote_terminal\\src\\mcp_server.py"
+        ],
+        "env": {
+            "PYTHONPATH": "D:\\Your-Proj\\remote_terminal\\src"
+        }
+    }
+  }
+}

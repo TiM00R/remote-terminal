@@ -1,0 +1,202 @@
+{
+  "category": "Workflows",
+  "tools": [
+    {
+      "name": "start_conversation",
+      "description": "Start a new conversation to track related commands",
+      "arguments": [
+        {
+          "name": "goal_summary",
+          "type": "text",
+          "required": true,
+          "label": "Goal Summary",
+          "placeholder": "configure wifi"
+        },
+        {
+          "name": "server_identifier",
+          "type": "text",
+          "required": false,
+          "label": "Server Identifier (optional)"
+        },
+        {
+          "name": "force",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Force create even if one is in-progress"
+        }
+      ]
+    },
+    {
+      "name": "resume_conversation",
+      "description": "Resume a paused conversation",
+      "arguments": [
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": true,
+          "label": "Conversation ID"
+        }
+      ]
+    },
+    {
+      "name": "end_conversation",
+      "description": "End a conversation and mark its final status",
+      "arguments": [
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": true,
+          "label": "Conversation ID"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "label": "Final Status",
+          "options": ["success", "failed", "rolled_back"]
+        },
+        {
+          "name": "user_notes",
+          "type": "textarea",
+          "required": false,
+          "label": "User Notes (optional)",
+          "rows": 3
+        }
+      ]
+    },
+    {
+      "name": "get_conversation_commands",
+      "description": "Get all commands from a conversation",
+      "arguments": [
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": true,
+          "label": "Conversation ID"
+        },
+        {
+          "name": "reverse_order",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Reverse order (for rollback)"
+        }
+      ]
+    },
+    {
+      "name": "list_conversations",
+      "description": "List conversations with optional filters",
+      "arguments": [
+        {
+          "name": "server_identifier",
+          "type": "text",
+          "required": false,
+          "label": "Server Identifier (optional)"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "label": "Status Filter",
+          "options": ["all", "in_progress", "paused", "success", "failed", "rolled_back"]
+        },
+        {
+          "name": "limit",
+          "type": "number",
+          "required": false,
+          "default": 50,
+          "label": "Max Results",
+          "min": 1,
+          "max": 200
+        }
+      ]
+    },
+    {
+      "name": "update_command_status",
+      "description": "Update command status (for rollback tracking)",
+      "arguments": [
+        {
+          "name": "command_id",
+          "type": "number",
+          "required": true,
+          "label": "Command ID"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "label": "Status",
+          "options": ["undone"]
+        }
+      ]
+    },
+    {
+      "name": "create_recipe",
+      "description": "Create a reusable recipe from a successful conversation",
+      "arguments": [
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": true,
+          "label": "Conversation ID"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "label": "Recipe Name",
+          "placeholder": "wifi_diagnostics"
+        },
+        {
+          "name": "description",
+          "type": "textarea",
+          "required": true,
+          "label": "Description",
+          "rows": 3
+        },
+        {
+          "name": "prerequisites",
+          "type": "text",
+          "required": false,
+          "label": "Prerequisites (optional)",
+          "placeholder": "Ubuntu 22.04+, sudo access"
+        },
+        {
+          "name": "success_criteria",
+          "type": "text",
+          "required": false,
+          "label": "Success Criteria (optional)",
+          "placeholder": "Service running, port 8080 open"
+        }
+      ]
+    },
+    {
+      "name": "list_recipes",
+      "description": "List all available recipes",
+      "arguments": [
+        {
+          "name": "limit",
+          "type": "number",
+          "required": false,
+          "default": 50,
+          "label": "Max Results",
+          "min": 1,
+          "max": 200
+        }
+      ]
+    },
+    {
+      "name": "get_recipe",
+      "description": "Get detailed recipe information including command sequence",
+      "arguments": [
+        {
+          "name": "recipe_id",
+          "type": "number",
+          "required": true,
+          "label": "Recipe ID"
+        }
+      ]
+    }
+  ]
+}

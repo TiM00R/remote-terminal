@@ -1,0 +1,29 @@
+# Remote Terminal Hosts Configuration - EXAMPLE
+# Copy this file to hosts.yaml and fill in your actual server details
+
+servers:
+  - name: example-server
+    host: 192.168.1.100
+    port: 22
+    user: your_username
+    password: your_password_here  # IMPORTANT: Keep hosts.yaml in .gitignore!
+    description: Example production server
+    default: true
+    tags: production, example
+    
+  - name: dev-server
+    host: 192.168.1.101
+    port: 22
+    user: developer
+    password: dev_password_here
+    description: Development environment
+    tags: development, testing
+
+# Add more servers as needed:
+# - name: backup-server
+#   host: backup.example.com
+#   port: 2222
+#   user: backup
+#   password: secure_password
+#   description: Backup server (custom SSH port)
+#   tags: backup

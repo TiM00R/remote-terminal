@@ -1,0 +1,211 @@
+# Remote Terminal Configuration File
+# Version: 3.0 - Multi-Server Support
+# Note: Server connection details moved to hosts.yaml
+
+# Connection management settings (apply to all servers)
+connection:
+  keepalive_interval: 30  # seconds
+  reconnect_attempts: 3
+  connection_timeout: 10
+
+# Command Execution Settings
+command_execution:
+  # Timeout settings
+  default_timeout: 10                     # CHANGED: 30 → 10 for better responsiveness
+  max_timeout: 3600                       # Maximum allowed (1 hour)
+  
+  # Prompt detection timing
+  prompt_grace_period: 0.3                # Wait after prompt for trailing output (seconds)
+  check_interval: 0.5                     # How often to check for completion (seconds)
+  
+  # Command tracking
+  max_command_history: 50                 # Maximum commands to keep in history
+  cleanup_interval: 300                   # Clean old commands every N seconds
+  
+  # Warning thresholds
+  warn_on_long_timeout: 60                # Warn if timeout exceeds this value
+
+# Prompt Detection Configuration
+prompt_detection:
+  # Prompt patterns to detect command completion
+  
+  patterns:
+    - "{user}@{host}:.*\\$\\s*"  # ✅ Matches any path
+    - "{user}@{host}:.*#\\s*"    # ✅ Matches root prompt too
+    - "root@{host}:~#\\s*"
+    - "root@{host}:.*#\\s*"
+  
+  # Verification settings
+  verification_enabled: true
+  verification_delay: 0.3                 # Seconds to wait before confirming prompt
+  
+  # Commands that change the prompt
+  prompt_changing_commands:
+    - command: "sudo su"
+      new_pattern: "root@{host}:.*[#$]"
+    - command: "sudo -i"
+      new_pattern: "root@{host}:.*[#$]"
+    - command: "su"
+      new_pattern: ".*@.*[#$]"
+    - command: "ssh"
+      new_pattern: ".*@.*[$#]"
+    - command: "docker exec"
+      new_pattern: ".*[@#]"
+  
+  # Sudo preauth settings
+  sudo:
+    # How long sudo preauth is valid (seconds)
+    # Default: 300 (5 minutes)
+    # Should match or be less than sudoers timestamp_timeout
+    preauth_validity_seconds: 300
+
+  # Background command detection
+  background_command_pattern: "&\\s*$"
+  warn_on_background: true
+
+# Output Buffer Configuration
+buffer:
+  max_lines: 10000
+  cleanup_on_full: true
+
+# Terminal Display Configuration
+terminal:
+  scrollback_lines: 1000
+  theme: "dark"
+  font_size: 14
+  font_family: "Consolas, Monaco, monospace"
+  cursor_blink: true
+  cursor_style: "block"
+
+# Command History Configuration
+history:
+  enabled: true
+  file: "~/.remote_terminal_history"
+  max_commands: 1000
+  save_on_exit: true
+  load_on_start: true
+
+# Keyboard Shortcuts Configuration
+shortcuts:
+  copy: "Ctrl+C"
+  paste: "Ctrl+V"
+  clear: "Ctrl+L"
+  search: "Ctrl+F"
+  interrupt: "Ctrl+C"
+  history_previous: "ArrowUp"
+  history_next: "ArrowDown"
+  history_search: "Ctrl+R"
+
+# Search Configuration
+search:
+  case_sensitive: true
+  highlight_color: "#ffff00"
+  wrap_around: true
+
+# Claude AI Integration Configuration
+claude:
+  auto_send_errors: true
+  
+  # Output mode settings
+  output_modes:
+    full_output_threshold: 100
+    preview_head_lines: 10
+    preview_tail_lines: 10
+    installation_summary_lines: 10        # Last N lines for successful installations
+    max_error_contexts: 10                # Maximum errors to return with context
+    
+    # Commands that produce large output (use summary mode)
+    summary_mode_commands:
+      - "apt"
+      - "apt-get"
+      - "yum"
+      - "dnf"
+      - "pip install"
+      - "npm install"
+      - "yarn install"
+      - "make"
+      - "cargo build"
+      - "docker build"
+      - "mvn"
+      - "gradle"
+      - "composer install"
+      - "composer update"
+    
+    # Commands where full output is needed
+    analysis_commands:
+      - "grep"
+      - "awk"
+      - "sed"
+      - "find"
+      - "jq"
+      - "locate"
+  
+  # Output thresholds by command type
+  thresholds:
+    system_info: 50
+    network_info: 100
+    file_listing: 50
+    file_viewing: 100
+    install: 100
+    generic: 50
+  
+  # Truncation settings
+  truncation:
+    head_lines: 30
+    tail_lines: 20
+  
+  # Error patterns to detect
+  error_patterns:
+    - "ERROR"
+    - "FAILED"
+    - "FATAL"
+    - "Cannot"
+    - "Permission denied"
+    - "No such file"
+    - "command not found"
+    - "error:"
+    - "Error:"
+    - "E:"
+    - "failed"
+    - "Failed"
+    - "fatal"
+    - "Fatal"
+    - "unable to"
+    - "Unable to"
+    - "could not"
+    - "Could not"
+    - "cannot"
+    - "Can't"
+    - "can't"
+    - "Couldn't"
+    - "couldn't"
+    - "not found"
+    - "Not found"
+    - "Err:"
+    - "Aborting"
+    - "aborting"
+    - "denied"
+    - "Denied"
+
+# Web Server Configuration
+server:
+  host: "localhost"
+  port: 8080           # MCP mode web terminal
+  auto_open_browser: true
+  reload: false
+
+# Standalone mode settings (when running standalone_mcp.py)
+standalone:
+  terminal_port: 8082  # Web terminal port (different from MCP to avoid conflicts)
+  control_port: 8081   # Control panel port
+
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "remote_terminal.log"
+  max_size_mb: 10
+  backup_count: 3
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Database configuration removed - SQLite auto-configured

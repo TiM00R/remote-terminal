@@ -1,0 +1,113 @@
+{
+  "category": "Commands",
+  "tools": [
+    {
+      "name": "execute_command",
+      "description": "Execute command on remote Linux machine with smart completion detection",
+      "arguments": [
+        {
+          "name": "command",
+          "type": "text",
+          "required": true,
+          "label": "Command",
+          "placeholder": "ls -la"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "default": 10,
+          "label": "Timeout (seconds)",
+          "min": 1,
+          "max": 3600
+        },
+        {
+          "name": "output_mode",
+          "type": "select",
+          "required": false,
+          "default": "auto",
+          "label": "Output Mode",
+          "options": ["auto", "full", "preview", "summary", "minimal", "raw"]
+        },
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": false,
+          "label": "Conversation ID (optional)"
+        }
+      ]
+    },
+    {
+      "name": "check_command_status",
+      "description": "Check status of a long-running command",
+      "arguments": [
+        {
+          "name": "command_id",
+          "type": "text",
+          "required": true,
+          "label": "Command ID",
+          "placeholder": "cmd_123456"
+        },
+        {
+          "name": "output_mode",
+          "type": "select",
+          "required": false,
+          "default": "auto",
+          "label": "Output Mode",
+          "options": ["auto", "full", "preview", "summary", "minimal", "raw"]
+        }
+      ]
+    },
+    {
+      "name": "get_command_output",
+      "description": "Get full unfiltered output of a command",
+      "arguments": [
+        {
+          "name": "command_id",
+          "type": "text",
+          "required": true,
+          "label": "Command ID",
+          "placeholder": "cmd_123456"
+        },
+        {
+          "name": "raw",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Return completely unfiltered output"
+        }
+      ]
+    },
+    {
+      "name": "cancel_command",
+      "description": "Send Ctrl+C to a running command",
+      "arguments": [
+        {
+          "name": "command_id",
+          "type": "text",
+          "required": true,
+          "label": "Command ID",
+          "placeholder": "cmd_123456"
+        }
+      ]
+    },
+    {
+      "name": "list_commands",
+      "description": "List all tracked commands with status",
+      "arguments": [
+        {
+          "name": "status_filter",
+          "type": "select",
+          "required": false,
+          "label": "Status Filter",
+          "options": ["all", "running", "completed", "killed"]
+        }
+      ]
+    },
+    {
+      "name": "get_terminal_status",
+      "description": "Get terminal connection status",
+      "arguments": []
+    }
+  ]
+}
