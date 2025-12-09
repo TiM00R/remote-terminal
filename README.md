@@ -55,7 +55,10 @@ Remote Terminal provides a **fully interactive terminal window** in your browser
 
 #### 🎬 See It In Action
 
-https://github.com/TiM00R/remote-terminal/assets/demo.mp4
+<video width="800" controls>
+  <source src="https://raw.githubusercontent.com/TiM00R/remote-terminal/master/docs/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 *Watch the interactive web terminal in action - see Claude execute commands while you maintain full visibility and control*
 
