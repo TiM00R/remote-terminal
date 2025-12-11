@@ -197,6 +197,43 @@
           "label": "Recipe ID"
         }
       ]
+    },
+    {
+      "name": "execute_recipe",
+      "description": "Execute a saved recipe on current or specified server",
+      "arguments": [
+        {
+          "name": "recipe_id",
+          "type": "number",
+          "required": true,
+          "label": "Recipe ID"
+        },
+        {
+          "name": "server_identifier",
+          "type": "text",
+          "required": false,
+          "label": "Server Identifier (optional)"
+        },
+        {
+          "name": "start_conversation",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Create conversation to track execution"
+        },
+        {
+          "name": "conversation_goal",
+          "type": "text",
+          "required": false,
+          "label": "Conversation Goal (optional)",
+          "placeholder": "Execute recipe: wifi_diagnostics"
+        }
+      ]
+    },
+    {
+      "name": "overview",
+      "description": "Get system status and available features",
+      "arguments": []
     }
   ]
 }

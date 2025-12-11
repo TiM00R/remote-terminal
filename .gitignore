@@ -82,3 +82,11 @@ htmlcov/
 ENV/
 env.bak/
 venv.bak/
+
+# MCP Registry tokens (keep private)
+.mcpregistry_github_token
+.mcpregistry_registry_token
+
+# Demo videos (too large for git)
+docs/demo-compressed.mp4
+docs/*.mp4
