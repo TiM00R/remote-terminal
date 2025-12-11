@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.tim00r/remote-terminal",
+  "title": "Remote Terminal MCP",
+  "description": "AI-powered remote Linux server management via MCP. Execute SSH commands with intelligent output filtering achieving 99% token reduction through dual-stream architecture.",
+  "homepage": "https://github.com/TiM00R/remote-terminal",
+  "license": "MIT",
+  "sourceRepositoryUrl": "https://github.com/TiM00R/remote-terminal",
+  "keywords": [
+    "ssh",
+    "remote-terminal",
+    "linux",
+    "server-management",
+    "automation",
+    "devops"
+  ],
+  "distribution": {
+    "type": "githubRelease",
+    "owner": "TiM00R",
+    "repo": "remote-terminal"
+  }
+}
