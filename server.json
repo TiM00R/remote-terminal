@@ -1,6 +1,7 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
-  "name": "io.github.tim00r/remote-terminal",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.TiM00R/remote-terminal",
+  "version": "1.0.0",  
   "title": "Remote Terminal MCP",
   "description": "Complete SSH terminal for Linux with AI/user control and dual-stream visibility",
   "homepage": "https://github.com/TiM00R/remote-terminal",
