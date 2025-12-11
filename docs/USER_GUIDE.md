@@ -628,7 +628,7 @@ On first command execution:
 ```
 ┌─────────────────────────────────────────────┐
 │ Remote Terminal                             │
-│                        Connected: obd@server │
+│                       Connected: obd@server │
 ├─────────────────────────────────────────────┤
 │                                             │
 │ $ whoami                                    │
@@ -636,7 +636,7 @@ On first command execution:
 │                                             │
 │ $ df -h                                     │
 │ Filesystem      Size  Used Avail Use%       │
-│ /dev/sda1        50G   20G   28G  42%      │
+│ /dev/sda1        50G   20G   28G  42%       │
 │                                             │
 └─────────────────────────────────────────────┘
 ```
@@ -664,6 +664,44 @@ Web terminal shares the same SSH connection as Claude:
 - Same prompt detection
 - Synchronized state
 - Single SSH session
+
+### Multi-Terminal Synchronization
+
+Open the same terminal URL in multiple browser windows - they all stay perfectly synchronized via WebSocket broadcast.
+
+**How it works:**
+- All terminals connect via WebSocket to the same server
+- SSH output broadcasts to ALL connected terminals simultaneously  
+- Input from ANY terminal appears in ALL terminals instantly
+- Clean disconnect when closing browser tabs
+
+**Benefits:**
+- **Multi-monitor support:** Watch same session on multiple screens
+- **Collaboration:** Multiple people can view the same session (share your screen or send URL)
+- **Backup terminal:** Keep an extra window open for safety
+- **Real-time sync:** Type in window 1, see it immediately in windows 2, 3, 4...
+
+**Example use cases:**
+- Monitor terminal on second screen while working on first
+- Share terminal view with colleague (they can watch, you control)
+- Keep backup window open during critical operations
+- Present live command execution to a team
+
+**Testing multi-terminal:**
+1. Open http://localhost:8080 in Browser Window 1
+2. Open http://localhost:8080 in Browser Window 2 (new tab/window)
+3. Type "ls" in Window 1 → appears in Window 2 instantly
+4. Run command → output appears in BOTH terminals
+5. Claude executes command → output in ALL terminals
+
+⚠️ **Best Practice:** Close unused terminal tabs when done. While the system efficiently handles multiple connections (tested with 10+ terminals), keeping many old tabs open can:
+- Consume unnecessary system resources (memory ~50KB per terminal)
+- Potentially cause WebSocket connection issues
+- Create confusion about which terminals are active
+
+**Clean up regularly:** Before starting a new session, close all old terminal tabs. This ensures optimal performance and prevents connection buildup.
+
+**Technical details:** See [WEBSOCKET_BROADCAST.md](WEBSOCKET_BROADCAST.md) for complete architecture and troubleshooting information.
 
 ---
 

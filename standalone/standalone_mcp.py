@@ -1,9 +1,6 @@
 """
 Remote Terminal - Standalone MCP Mode (MULTI-TOOL VERSION)
-
-Complete multi-tool interface with all 35 MCP tools organized by category.
-Uses modular JavaScript and JSON schemas for maintainability.
-CLEANED: Removed unused HistoryManager references
+FIXED: Updated to use WebSocket broadcast for multi-terminal support
 """
 
 import sys
@@ -28,7 +25,7 @@ from database_manager import DatabaseManager
 from hosts_manager import HostsManager
 from ssh_manager import SSHManager
 from shared_state import SharedTerminalState
-from web_terminal import WebTerminalServer
+from web_terminal import WebTerminalServer  # FIXED: Use WebSocket version
 
 # Import Starlette at top level
 from starlette.applications import Starlette
@@ -67,7 +64,6 @@ async def execute_mcp_tool_endpoint(request):
         from tools import TOOL_MODULES
         
         # Prepare common dependencies (all possible kwargs)
-        # REMOVED: 'history_manager' (unused - bash handles history)
         dependencies = {
             'shared_state': g_shared_state,
             'config': g_config,
@@ -267,7 +263,6 @@ def main():
     
     
     # Load configuration
-    # UPDATED: Load configuration from project root (parent.parent)
     config_path = Path(__file__).parent.parent / 'config.yaml'
     g_config = Config(str(config_path))
 
@@ -289,7 +284,6 @@ def main():
     logger.info("Database connected")
     
     # Load hosts manager
-    # UPDATED: Load hosts manager from project root (parent.parent)
     hosts_path = Path(__file__).parent.parent / 'hosts.yaml'
     g_hosts_manager = HostsManager(str(hosts_path))
     logger.info(f"Loaded {len(g_hosts_manager.servers)} server(s)")
@@ -347,7 +341,7 @@ def main():
     g_config.server.port = terminal_port
     logger.info(f"Using standalone terminal port: {terminal_port}")
         
-    # Create web terminal
+    # Create web terminal with WebSocket support
     g_web_terminal = WebTerminalServer(
         shared_state=g_shared_state,
         config=g_config,
@@ -376,9 +370,6 @@ def main():
                 print(f"Machine ID registered: {machine_id}")
                 logger.info(f"Server setup complete")
                 
-                # REMOVED: Don't clear buffer after initialization
-                # This preserves command output for get_command_output tool
-                
                 # Just send a newline to get fresh prompt for terminal UI
                 time.sleep(0.5)
                 ssh_manager.send_input('\n')
@@ -395,8 +386,6 @@ def main():
     
     # Start web terminal in background
     print(f"Starting web terminal on port {terminal_port}...")
-    # Override the port from config for standalone mode
-    # g_config.server.port = terminal_port
     terminal_thread = Thread(target=g_web_terminal.start, daemon=True)
         
     terminal_thread.start()
@@ -447,7 +436,7 @@ def main():
     config_uvicorn = uvicorn.Config(
         app,
         host='0.0.0.0',
-        port=control_port,  # Use port from config
+        port=control_port,
         log_level='warning'
     )
     

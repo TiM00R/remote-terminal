@@ -34,6 +34,7 @@ And Claude does it - executing commands, analyzing output, and taking action on 
 - **📚 Recipe System** - Save successful workflows for reuse
 - **🗄️ Database Integration** - Full audit trail with SQLite
 - **🌍 Interactive Web Terminal** - Full-featured terminal in browser (type, paste, scroll history)
+- **🔄 Multi-Terminal Sync** - Open multiple terminals, all perfectly synchronized
 
 ### The Interactive Web Terminal
 
@@ -52,6 +53,10 @@ Remote Terminal provides a **fully interactive terminal window** in your browser
 - Continue working while you watch
 
 **The key advantage:** You maintain complete visibility and control. Every command Claude runs appears in your terminal window in real-time. You're never in the dark about what's happening on your server - it's like sitting side-by-side with an assistant who types commands for you while you watch the screen.
+
+**Multi-Terminal Support:** Open multiple browser windows at `http://localhost:8080` - they all stay perfectly synchronized via WebSocket broadcast. Type in one terminal, see it in all terminals instantly. Perfect for multi-monitor setups or sharing your view with others.
+
+⚠️ **Best Practice:** Close unused terminal tabs when done. While the system handles multiple connections efficiently, keeping many old tabs open can consume unnecessary resources and may cause connection issues.
 
 #### 🎬 See It In Action
 
@@ -169,6 +174,7 @@ Complete guides for every use case:
 - **[INSTALLATION.md](docs/INSTALLATION.md)** - Detailed setup instructions
 - **[USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete feature walkthrough
 - **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common problems and solutions
+- **[WEBSOCKET_BROADCAST.md](docs/WEBSOCKET_BROADCAST.md)** - Multi-terminal synchronization details
 
 ---
 
@@ -266,7 +272,8 @@ remote_terminal/
 │   ├── QUICK_START.md
 │   ├── INSTALLATION.md
 │   ├── USER_GUIDE.md
-│   └── TROUBLESHOOTING.md
+│   ├── TROUBLESHOOTING.md
+│   └── WEBSOCKET_BROADCAST.md
 ├── recipes/                   # Example automation recipes
 ├── src/                       # Source code
 │   ├── tools/                 # MCP tool modules
@@ -282,7 +289,7 @@ remote_terminal/
 │   ├── database_manager.py    # SQLite integration
 │   ├── output_filter.py       # Smart filtering
 │   ├── prompt_detector.py     # Command completion detection
-│   └── web_terminal.py        # Web interface
+│   └── web_terminal.py        # WebSocket-enabled web interface
 ├── standalone/                # Standalone web UI
 ├── config.yaml                # Global settings
 ├── hosts.yaml                 # Server configurations
@@ -294,9 +301,9 @@ remote_terminal/
 - **Python 3.9+** - Core language
 - **MCP Protocol** - Claude integration
 - **Paramiko** - SSH/SFTP library
-- **FastAPI** - Web terminal server
+- **NiceGUI + WebSockets** - Web terminal with multi-terminal sync
 - **SQLite** - Database for history/recipes
-- **NiceGUI** - Web UI framework
+- **FastAPI** - Web framework
 
 ---
 
@@ -478,6 +485,7 @@ This is Tim's personal project. If you'd like to contribute:
 - ✅ SFTP directory transfer with compression
 - ✅ Comprehensive database integration
 - ✅ Full audit trail
+- ✅ WebSocket-based multi-terminal synchronization
 
 ### Version 2.0 (October 2024)
 
@@ -502,6 +510,7 @@ For issues or questions:
    - QUICK_START.md for setup
    - USER_GUIDE.md for features
    - TROUBLESHOOTING.md for problems
+   - WEBSOCKET_BROADCAST.md for multi-terminal details
 
 2. **Review Logs**
    - Claude Desktop logs (Help → Show Logs)
@@ -525,7 +534,7 @@ This project is for personal use by Tim. Not currently open source.
 - **Anthropic** - Claude and MCP protocol
 - **Paramiko** - SSH library
 - **FastAPI** - Web framework
-- **NiceGUI** - UI components
+- **NiceGUI** - UI components with WebSocket support
 
 ---
 
@@ -533,6 +542,6 @@ This project is for personal use by Tim. Not currently open source.
 
 ---
 
-**Version:** 3.0 (SQLite-based, multi-server support)  
+**Version:** 3.0 (SQLite-based, multi-server support, WebSocket multi-terminal sync)  
 **Last Updated:** December 2024  
 **Maintainer:** Tim

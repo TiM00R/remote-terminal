@@ -1,6 +1,6 @@
 /**
- * Remote Terminal - JavaScript Module
- * Handles xterm.js terminal initialization, I/O, copy/paste, and SFTP transfer progress
+ * Remote Terminal - WebSocket Edition
+ * FIXED: Properly closes WebSocket on page unload to prevent zombie connections
  */
 
 (async function() {
@@ -11,7 +11,6 @@
     
     // ========== TERMINAL INITIALIZATION ==========
     
-    // Create terminal with configuration
     const term = new Terminal({
         cursorBlink: true, 
         fontSize: 14,
@@ -25,38 +24,127 @@
         convertEol: true
     });
     
-    // Add fit addon for automatic resizing
     const fitAddon = new FitAddon.FitAddon();
     term.loadAddon(fitAddon);
     term.open(document.getElementById('terminal'));
     
-    // Initial fit and resize notification
     await new Promise(r => setTimeout(r, 100));
     fitAddon.fit();
     
-    // Send initial size to backend
-    fetch('/api/terminal_resize', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            cols: term.cols,
-            rows: term.rows
-        })
-    }).catch(err => console.error('Initial resize failed:', err));
-    
     // Welcome message
-    term.writeln('Terminal initialized. Waiting for SSH output...');
+    term.writeln('Terminal initialized. Connecting via WebSocket...');
+    term.writeln('Multi-terminal sync: Type in ANY terminal, see in ALL terminals!');
     term.writeln('Tip: Right-click for Copy/Paste menu, or use Ctrl+Shift+C/V');
+    
+    // ========== WEBSOCKET CONNECTION ==========
+    
+    let ws = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 10;
+    let intentionalClose = false;
+    
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
+        
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+            reconnectAttempts = 0;
+            term.writeln('\r\n✓ WebSocket connected - terminals synchronized');
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                
+                if (message.type === 'terminal_output') {
+                    term.write(message.data);
+                }
+                else if (message.type === 'connection') {
+                    console.log('Connection status:', message.status);
+                }
+                else if (message.type === 'transfer_progress') {
+                    console.log('Transfer progress:', message.transfer_id);
+                }
+                
+            } catch (e) {
+                console.error('Error processing WebSocket message:', e);
+            }
+        };
+        
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+        
+        ws.onclose = () => {
+            console.log('WebSocket closed');
+            
+            // Don't reconnect if this was intentional (page unload)
+            if (intentionalClose) {
+                console.log('WebSocket closed intentionally (page unload)');
+                return;
+            }
+            
+            term.writeln('\r\n✗ WebSocket disconnected');
+            
+            // Attempt reconnection
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+                term.writeln(`  Reconnecting in ${delay/1000}s... (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                
+                setTimeout(connectWebSocket, delay);
+            } else {
+                term.writeln('  Max reconnection attempts reached. Please refresh the page.');
+            }
+        };
+    }
+    
+    // FIXED: Close WebSocket when page unloads
+    window.addEventListener('beforeunload', () => {
+        intentionalClose = true;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            console.log('Closing WebSocket due to page unload');
+            ws.close();
+        }
+    });
+    
+    // Initial connection
+    connectWebSocket();
     
     // ========== USER INPUT HANDLING ==========
     
-    // Send user input to backend
     term.onData(data => {
-        fetch('/api/terminal_input', {
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({data})
-        }).catch(() => {});
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'terminal_input',
+                data: data
+            }));
+        }
+    });
+    
+    // ========== TERMINAL RESIZE ==========
+    
+    term.onResize(({cols, rows}) => {
+        console.log('Terminal resized to:', cols, 'x', rows);
+        
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'terminal_resize',
+                cols: cols,
+                rows: rows
+            }));
+        }
+    });
+    
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            fitAddon.fit();
+        }, 100);
     });
     
     // ========== COPY/PASTE FUNCTIONALITY ==========
@@ -83,7 +171,6 @@
             .catch(err => console.warn('Paste failed:', err));
     }
     
-    // Handle paste events
     terminalElement.addEventListener('paste', (e) => {
         e.preventDefault();
         const text = e.clipboardData?.getData('text');
@@ -92,14 +179,12 @@
         }
     });
     
-    // Custom keyboard shortcuts (Ctrl+Shift+C/V)
     term.attachCustomKeyEventHandler((event) => {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const modKey = isMac ? event.metaKey : event.ctrlKey;
         
         if (event.type !== 'keydown') return true;
         
-        // Ctrl+C or Ctrl+Shift+C for copy
         if (modKey && event.key.toLowerCase() === 'c') {
             const hasSelection = term.hasSelection();
             
@@ -107,11 +192,10 @@
                 copySelection();
                 return false;
             } else if (!hasSelection) {
-                return true; // Allow Ctrl+C through to terminal
+                return true;
             }
         }
         
-        // Ctrl+Shift+V for paste
         if (modKey && event.shiftKey && event.key.toLowerCase() === 'v') {
             pasteFromClipboard();
             return false;
@@ -139,7 +223,6 @@
         contextMenu.style.left = x + 'px';
         contextMenu.style.top = y + 'px';
         
-        // Copy option
         const copyItem = document.createElement('div');
         copyItem.className = 'context-menu-item' + (hasSelection ? '' : ' disabled');
         copyItem.textContent = 'Copy';
@@ -151,7 +234,6 @@
         }
         contextMenu.appendChild(copyItem);
         
-        // Paste option
         const pasteItem = document.createElement('div');
         pasteItem.className = 'context-menu-item';
         pasteItem.textContent = 'Paste';
@@ -161,12 +243,10 @@
         };
         contextMenu.appendChild(pasteItem);
         
-        // Separator
         const separator = document.createElement('div');
         separator.className = 'context-menu-separator';
         contextMenu.appendChild(separator);
         
-        // Select All option
         const selectAllItem = document.createElement('div');
         selectAllItem.className = 'context-menu-item';
         selectAllItem.textContent = 'Select All';
@@ -176,7 +256,6 @@
         };
         contextMenu.appendChild(selectAllItem);
         
-        // Clear Terminal option
         const clearItem = document.createElement('div');
         clearItem.className = 'context-menu-item';
         clearItem.textContent = 'Clear Terminal';
@@ -188,7 +267,6 @@
         
         document.body.appendChild(contextMenu);
         
-        // Adjust position if menu goes off-screen
         const rect = contextMenu.getBoundingClientRect();
         if (rect.right > window.innerWidth) {
             contextMenu.style.left = (x - rect.width) + 'px';
@@ -198,13 +276,11 @@
         }
     }
     
-    // Right-click to show context menu
     terminalElement.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         showContextMenu(e.pageX, e.pageY);
     });
     
-    // Close context menu on click or escape
     document.addEventListener('click', removeContextMenu);
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -212,41 +288,6 @@
         }
     });
     
-    // ========== TERMINAL RESIZE ==========
-    
-    term.onResize(({cols, rows}) => {
-        console.log('Terminal resized to:', cols, 'x', rows);
-        fetch('/api/terminal_resize', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({cols, rows})
-        }).catch(err => console.error('Resize failed:', err));
-    });
-    
-    // Handle window resize
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            fitAddon.fit();
-        }, 100);
-    });
-    
-    // ========== OUTPUT POLLING ==========
-    
-    async function pollOutput() {
-        while(true) {
-            try {
-                const res = await fetch('/api/terminal_output');
-                const data = await res.json();
-                if (data.output) term.write(data.output);
-            } catch(e) {}
-            await new Promise(r => setTimeout(r, 50));
-        }
-    }
-    pollOutput();
-    
-    // Focus terminal
     term.focus();
     
 })();
