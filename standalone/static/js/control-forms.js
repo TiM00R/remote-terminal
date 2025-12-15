@@ -38,6 +38,11 @@ function generateForm(tool) {
         return;
     }
     
+    if (tool.special === 'update_recipe_form') {
+        generateUpdateRecipeForm(freshForm, tool);
+        return;
+    }
+    
     // Generate fields
     tool.arguments.forEach(arg => {
         const field = createFormField(arg, tool);
@@ -56,6 +61,218 @@ function generateForm(tool) {
         e.preventDefault();
         executeTool(tool);
     });
+}
+
+async function generateUpdateRecipeForm(form, tool) {
+    console.log('[generateUpdateRecipeForm] Starting form generation');
+    
+    const recipes = window.controlMain.getCachedRecipes();
+    console.log('[generateUpdateRecipeForm] Got recipes:', recipes);
+    
+    if (!recipes || recipes.length === 0) {
+        console.error('[generateUpdateRecipeForm] No recipes available!');
+        form.innerHTML = '<div class="error">No recipes available. Please create a recipe first.</div>';
+        return;
+    }
+    
+    console.log('[generateUpdateRecipeForm] Building form with', recipes.length, 'recipes');
+    
+    // Create recipe selection dropdown
+    const selectGroup = document.createElement('div');
+    selectGroup.className = 'form-group';
+    
+    const selectLabel = document.createElement('label');
+    selectLabel.textContent = 'Select Recipe to Update';
+    selectLabel.classList.add('required');
+    selectLabel.htmlFor = 'recipe_id';
+    selectGroup.appendChild(selectLabel);
+    
+    const select = document.createElement('select');
+    select.id = 'recipe_id';
+    select.name = 'recipe_id';
+    select.required = true;
+    
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = 'Choose a recipe...';
+    select.appendChild(placeholderOpt);
+    
+    recipes.forEach(recipe => {
+        const option = document.createElement('option');
+        option.value = recipe.id;
+        option.textContent = `${recipe.id} - ${recipe.name}`;
+        option.dataset.recipeId = recipe.id;
+        select.appendChild(option);
+    });
+    
+    selectGroup.appendChild(select);
+    form.appendChild(selectGroup);
+    
+    // Create other fields (initially empty and enabled for editing)
+    const formFields = {};
+    
+    // Name field
+    const nameGroup = document.createElement('div');
+    nameGroup.className = 'form-group';
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = 'Recipe Name';
+    nameLabel.htmlFor = 'name';
+    nameGroup.appendChild(nameLabel);
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.id = 'name';
+    nameInput.name = 'name';
+    nameInput.placeholder = 'docker_diagnostics_v2';
+    nameGroup.appendChild(nameInput);
+    form.appendChild(nameGroup);
+    formFields.name = nameInput;
+    
+    // Description field
+    const descGroup = document.createElement('div');
+    descGroup.className = 'form-group';
+    const descLabel = document.createElement('label');
+    descLabel.textContent = 'Description';
+    descLabel.htmlFor = 'description';
+    descGroup.appendChild(descLabel);
+    const descInput = document.createElement('textarea');
+    descInput.id = 'description';
+    descInput.name = 'description';
+    descInput.rows = 3;
+    descGroup.appendChild(descInput);
+    form.appendChild(descGroup);
+    formFields.description = descInput;
+    
+    // Commands field
+    const cmdsGroup = document.createElement('div');
+    cmdsGroup.className = 'form-group';
+    const cmdsLabel = document.createElement('label');
+    cmdsLabel.textContent = 'Commands JSON (replaces all)';
+    cmdsLabel.htmlFor = 'commands';
+    cmdsGroup.appendChild(cmdsLabel);
+
+    const cmdsInput = document.createElement('pre');
+    cmdsInput.id = 'commands';
+    cmdsInput.contentEditable = 'true';
+    cmdsInput.className = 'json-editor';
+    cmdsInput.innerHTML = '<span style="color: #6e7681; font-style: italic;">[{"sequence": 1, "command": "ls -la"}]</span>';
+    cmdsGroup.appendChild(cmdsInput);
+    form.appendChild(cmdsGroup);
+    formFields.commands = cmdsInput;
+    
+    // Prerequisites field
+    const preqGroup = document.createElement('div');
+    preqGroup.className = 'form-group';
+    const preqLabel = document.createElement('label');
+    preqLabel.textContent = 'Prerequisites';
+    preqLabel.htmlFor = 'prerequisites';
+    preqGroup.appendChild(preqLabel);
+    const preqInput = document.createElement('input');
+    preqInput.type = 'text';
+    preqInput.id = 'prerequisites';
+    preqInput.name = 'prerequisites';
+    preqGroup.appendChild(preqInput);
+    form.appendChild(preqGroup);
+    formFields.prerequisites = preqInput;
+    
+    // Success criteria field
+    const succGroup = document.createElement('div');
+    succGroup.className = 'form-group';
+    const succLabel = document.createElement('label');
+    succLabel.textContent = 'Success Criteria';
+    succLabel.htmlFor = 'success_criteria';
+    succGroup.appendChild(succLabel);
+    const succInput = document.createElement('input');
+    succInput.type = 'text';
+    succInput.id = 'success_criteria';
+    succInput.name = 'success_criteria';
+    succGroup.appendChild(succInput);
+    form.appendChild(succGroup);
+    formFields.success_criteria = succInput;
+    
+    // Add submit button
+    const btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'btn-execute';
+    btn.textContent = `▶️ Execute ${tool.name}`;
+    form.appendChild(btn);
+    
+    // Handle recipe selection change - auto-populate fields
+    select.addEventListener('change', async () => {
+        const selectedRecipeId = select.value;
+        
+        if (!selectedRecipeId) {
+            // Clear all fields
+            formFields.name.value = '';
+            formFields.description.value = '';
+            formFields.commands.value = '';
+            formFields.prerequisites.value = '';
+            formFields.success_criteria.value = '';
+            return;
+        }
+        
+        // Fetch full recipe details
+        try {
+            const response = await fetch('http://localhost:8081/execute_mcp_tool', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tool: 'get_recipe',
+                    arguments: { recipe_id: parseInt(selectedRecipeId) }
+                })
+            });
+            
+            const recipe = await response.json();
+            console.log('[Recipe Selection] API response:', recipe);
+
+            // The execute_mcp_tool endpoint returns the recipe data directly
+            if (recipe.error) {
+                alert(`Failed to load recipe details: ${recipe.error}`);
+                return;
+            }
+
+            if (recipe.id) {                
+                // Populate all fields
+                formFields.name.value = recipe.name || '';
+                formFields.description.value = recipe.description || '';
+                
+                // Format commands as pretty JSON
+                
+
+                if (recipe.command_sequence && Array.isArray(recipe.command_sequence)) {
+                    const json = JSON.stringify(recipe.command_sequence, null, 2);
+                    const highlighted = json
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
+                        .replace(/: (\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
+                        .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+                        .replace(/: null/g, ': <span class="json-null">null</span>')
+                        .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>');
+                    formFields.commands.innerHTML = highlighted;
+                } else {
+                    formFields.commands.value = '';
+                }
+                
+                formFields.prerequisites.value = recipe.prerequisites || '';
+                formFields.success_criteria.value = recipe.success_criteria || '';
+                
+                console.log('Auto-populated recipe fields:', recipe.name);
+            } else {
+                alert(`Failed to load recipe details: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            alert(`Error loading recipe: ${error.toString()}`);
+        }
+    });
+    
+    // Add submit handler
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        executeTool(tool);
+    });
+    
+    console.log('[generateUpdateRecipeForm] Form generation complete');
 }
 
 async function generateDynamicServerSelectForm(form, tool) {
@@ -232,6 +449,7 @@ async function generateDynamicServerUpdateForm(form, tool) {
     }
 }
 
+
 function createFormField(arg, tool) {
     const group = document.createElement('div');
     group.className = 'form-group';
@@ -244,8 +462,10 @@ function createFormField(arg, tool) {
         return createServerSelectField(arg);
     } else if (arg.type === 'file_picker' || arg.type === 'folder_picker') {
         return createFilePickerField(arg);
+    } else if (arg.type === 'recipe_select') {
+        return createRecipeSelectField(arg);
     }
-    
+
     // Label
     const label = document.createElement('label');
     label.textContent = arg.label;
@@ -393,6 +613,50 @@ function createServerSelectField(arg) {
     return group;
 }
 
+function createRecipeSelectField(arg) {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    
+    const label = document.createElement('label');
+    label.textContent = arg.label;
+    label.htmlFor = arg.name;
+    if (arg.required) {
+        label.classList.add('required');
+    }
+    group.appendChild(label);
+    
+    const recipes = window.controlMain.getCachedRecipes();
+    
+    const select = document.createElement('select');
+    select.id = arg.name;
+    select.name = arg.name;
+    if (arg.required) select.required = true;
+    
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = 'Choose a recipe...';
+    select.appendChild(placeholderOpt);
+    
+    if (recipes && recipes.length > 0) {
+        recipes.forEach(recipe => {
+            const option = document.createElement('option');
+            option.value = recipe.id;
+            option.textContent = `${recipe.id} - ${recipe.name}`;
+            select.appendChild(option);
+        });
+    } else {
+        const noRecipesOpt = document.createElement('option');
+        noRecipesOpt.value = '';
+        noRecipesOpt.textContent = 'No recipes available';
+        noRecipesOpt.disabled = true;
+        select.appendChild(noRecipesOpt);
+    }
+    
+    group.appendChild(select);
+    return group;
+}
+
+
 function createCheckboxField(arg) {
     const group = document.createElement('div');
     group.className = 'checkbox-group';
@@ -497,6 +761,12 @@ function serializeForm(form, tool) {
                 });
                 return obj;
             });
+        } else if (arg.type === 'recipe_select') {
+            // Handle recipe_select specially - convert to number
+            const input = form.querySelector(`#${arg.name}`);
+            if (input && input.value) {
+                data[arg.name] = parseInt(input.value);
+            }
         } else {
             const input = form.querySelector(`#${arg.name}`);
             if (input) {
@@ -512,6 +782,19 @@ function serializeForm(form, tool) {
                 // Convert to appropriate type
                 if (arg.type === 'number') {
                     value = value ? parseFloat(value) : undefined;
+                }
+                
+                // Special handling for commands field - parse JSON if present
+                if (arg.name === 'commands') {
+                    const cmdElement = form.querySelector(`#${arg.name}`);
+                    value = cmdElement ? cmdElement.textContent : '';
+                    if (value) {
+                        try {
+                            value = JSON.parse(value);
+                        } catch (e) {
+                            console.warn('Failed to parse commands JSON');
+                        }
+                    }
                 }
                 
                 // FIXED: Always include required fields, skip only empty optional fields

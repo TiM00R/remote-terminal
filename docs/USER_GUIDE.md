@@ -3,17 +3,21 @@
 Comprehensive guide to all features of the Remote Terminal MCP integration with Claude.
 
 ## Table of Contents
+## Table of Contents
 
 1. [Overview](#overview)
 2. [Basic Usage](#basic-usage)
 3. [Multi-Server Management](#multi-server-management)
 4. [Command Execution](#command-execution)
-5. [File Transfer (SFTP)](#file-transfer-sftp)
+5. [File Transfer (sftp)](#file-transfer-sftp)
 6. [Batch Script Execution](#batch-script-execution)
 7. [Conversations & Tracking](#conversations--tracking)
 8. [Recipes & Automation](#recipes--automation)
-9. [Web Terminal Interface](#web-terminal-interface)
-10. [Advanced Features](#advanced-features)
+9. [Understanding Batch Scripts vs Recipes](#understanding-batch-scripts-vs-recipes)
+10. [Web Terminal Interface](#web-terminal-interface)
+11. [Advanced Features](#advanced-features)
+12. [Tips & Best-Practices](#tips--best-practices)
+13. [Next Steps](#next-steps)
 
 ---
 
@@ -609,7 +613,393 @@ Prerequisites: Docker should be installed
 Success: Docker running, responsive
 ```
 
+### Managing Recipes
+
+#### Updating Recipes
+
+You can modify existing recipes without creating new ones:
+
+```
+Update recipe 4 to fix the disk check command
+Change the description of recipe 3
+Rename the wifi recipe to 'wifi_diagnostics_v2'
+```
+
+**What can be updated:**
+- Name
+- Description
+- Command sequence (replaces all commands)
+- Prerequisites
+- Success criteria
+
+**Important:** Updates preserve the recipe ID and usage statistics. The old version is not saved - if you want to keep both versions, create a new recipe instead.
+
+**Example:**
+```
+User: Update recipe 4 - change the description to "Docker and PostgreSQL diagnostics v2"
+Claude: Recipe 4 updated successfully. Description changed.
+```
 ---
+
+#### Creating Recipes Manually
+
+You can create recipes without executing commands first:
+
+```
+Create a recipe called 'system_health' with commands to check disk, memory, and CPU
+```
+
+Claude will build a recipe from your description without needing a conversation.
+
+**Use Cases:**
+- Build recipes from documentation
+- Create recipes based on best practices
+- Combine commands from multiple sources
+- Manual recipe construction
+
+**Command Types Supported:**
+- **Shell commands:** Regular bash commands
+- **MCP tool calls:** Can include other MCP tools like batch scripts or file transfers
+
+**Example:**
+```
+User: Create a recipe called 'quick_diagnostics' with these steps:
+      1. Check disk space
+      2. Check memory usage  
+      3. Check running processes
+
+Claude: [Creates recipe with proper bash commands for each step]
+        Recipe 'quick_diagnostics' created with 3 commands.
+```
+
+---
+
+#### Deleting Recipes
+
+Remove recipes you no longer need:
+
+```
+Delete recipe 3
+```
+
+**Safety Features:**
+- Two-step confirmation process
+- First call shows what will be deleted
+- Second call with confirmation actually deletes
+- Permanent deletion (not recoverable)
+
+**Process:**
+1. **First request:** "Delete recipe 5"
+   - Claude shows recipe details
+   - Shows command count and usage stats
+   - Asks for confirmation
+   
+2. **Second request:** "Yes, delete it" or call with confirm=true
+   - Recipe permanently removed from database
+
+**Example:**
+```
+User: Delete the old wifi diagnostics recipe
+Claude: Recipe #3: wifi_diagnostics_old
+        Commands: 8
+        Times used: 2
+        Last used: 2024-11-15
+        
+        This will PERMANENTLY delete the recipe. 
+        To proceed, confirm deletion.
+
+User: Yes, confirm deletion
+Claude: Recipe 'wifi_diagnostics_old' has been permanently deleted.
+```
+
+**Warning:** Deleted recipes cannot be recovered. Make sure you have the information saved elsewhere if needed, or consider updating the recipe instead of deleting it.
+
+---
+
+## Understanding Batch Scripts vs Recipes
+
+Both batch scripts and recipes execute multiple commands, but they have different technical characteristics and use cases.
+
+### Quick Comparison
+
+| Feature | Batch Scripts | Recipes |
+|---------|--------------|---------|
+| **Storage** | Stored in database | Stored in database |
+| **Commands** | Linux shell commands only | Shell commands + MCP tool calls |
+| **Execution** | Always as single MCP call | Single call OR step-by-step |
+| **Output Log** | Downloaded to Windows PC | Execution results returned |
+| **Typical Use** | Short, deterministic sequences | Flexible workflows with logic |
+| **Speed** | Very fast (atomic execution) | Fast (atomic) or controlled (step-by-step) |
+| **Conversation** | Optional tracking | Optional tracking |
+| **Best For** | Linear command sequences | Complex workflows with tools |
+
+### When to Use Batch Scripts
+
+**Use batch scripts for:**
+- **Deterministic Linux command sequences** - Known steps that always run the same way
+- **System diagnostics** - Gathering system information
+- **Quick multi-step checks** - Fast verification tasks
+- **Linear workflows** - Step 1, 2, 3... with no branching
+
+**Example scenarios:**
+```
+Run network diagnostics (ifconfig, route, ping, dns check)
+Check docker containers and logs (docker ps, logs, inspect)
+Gather system info (cpu, memory, disk, processes)
+Verify installation (check versions, ports, services)
+```
+
+**Technical characteristics:**
+- **Atomic execution:** All commands in one MCP tool call
+- **Shell only:** Pure bash/Linux commands (no MCP tools)
+- **Fast:** Executes entire sequence without round-trips
+- **Full logs:** Complete output downloaded to Windows PC (`C:\Users\...\mcp_batch_logs\`)
+- **Database tracked:** Execution history saved
+
+**Example batch script:**
+```bash
+#!/bin/bash
+echo "=== [STEP 1/3] Check interfaces ==="
+ip link show
+echo "[STEP_1_COMPLETE]"
+
+echo "=== [STEP 2/3] Check routing ==="
+ip route show
+echo "[STEP_2_COMPLETE]"
+
+echo "=== [STEP 3/3] Check DNS ==="
+cat /etc/resolv.conf
+echo "[STEP_3_COMPLETE]"
+```
+**Result:** Executed in ~1 second, full log downloaded to PC
+
+### When to Use Recipes
+
+**Use recipes for:**
+- **Workflows mixing shell + MCP tools** - Combining Linux commands with file transfers, other tools
+- **Flexible execution** - When you might want to run all at once OR step-by-step
+- **Reusable procedures** - Workflows you'll execute multiple times
+- **Complex automation** - Multi-step processes with different tool types
+
+**Example scenarios:**
+```
+Deploy application (shell commands + file upload + verification)
+Backup and download (shell backup command + SFTP download)
+System setup (shell config + batch diagnostics + file transfer)
+Health check with reporting (shell checks + upload results)
+```
+
+**Technical characteristics:**
+- **Flexible execution:** Run as single call OR step-by-step
+- **Multi-tool:** Combines shell commands AND MCP tool calls
+- **Stored permanently:** Database with usage stats
+- **Execution results:** Returned in response (not downloaded)
+- **Versioned:** Can be updated, tracked over time
+
+**Example recipe (mixing tools):**
+```json
+[
+  {
+    "sequence": 1,
+    "command": "docker stats --no-stream",
+    "description": "Check container resources"
+  },
+  {
+    "sequence": 2,
+    "type": "mcp_tool",
+    "tool": "execute_batch_script",
+    "params": {"script": "...", "description": "Run diagnostics"},
+    "description": "Full system diagnostics"
+  },
+  {
+    "sequence": 3,
+    "type": "mcp_tool",
+    "tool": "download_file",
+    "params": {"remote_path": "/var/log/app.log", "local_path": "C:\\logs\\app.log"},
+    "description": "Download application logs"
+  }
+]
+```
+**Result:** Can execute all at once OR step 1, 2, 3 separately
+
+### Key Technical Differences
+
+#### Execution Model
+
+**Batch Scripts:**
+```
+User: Run network diagnostics
+Claude: [Single MCP call to execute_batch_script]
+        ├─ Uploads script to server
+        ├─ Executes entire script atomically
+        ├─ Downloads full log to PC
+        └─ Returns summary to Claude
+        
+Duration: ~3 seconds for 15 commands
+```
+
+**Recipes (Atomic):**
+```
+User: Execute recipe 5
+Claude: [Single MCP call to execute_recipe]
+        ├─ Loads recipe from database
+        ├─ Executes all steps in sequence
+        ├─ Can mix shell + MCP tools
+        └─ Returns execution results
+        
+Duration: ~5 seconds for 10 mixed steps
+```
+
+**Recipes (Step-by-step):**
+```
+User: Walk me through recipe 5 step by step
+Claude: [Multiple MCP calls - one per step]
+        ├─ Call 1: Execute step 1 (shell command)
+        ├─ User sees result, can intervene
+        ├─ Call 2: Execute step 2 (file upload)
+        ├─ User sees result, can intervene
+        └─ Call 3: Execute step 3 (batch script)
+        
+Duration: ~30 seconds for 10 steps (with user interaction)
+```
+
+#### Command Types
+
+**Batch Scripts - Shell Only:**
+```bash
+# ✓ These work in batch scripts
+ls -la /var/log
+docker ps -a
+systemctl status nginx
+grep ERROR /var/log/syslog
+tar -czf backup.tar.gz /data
+
+# ✗ These DO NOT work in batch scripts
+upload_file(...)        # Not a shell command
+download_directory(...) # Not a shell command
+execute_recipe(...)     # Not a shell command
+```
+
+**Recipes - Shell + MCP Tools:**
+```json
+[
+  // ✓ Shell command
+  {
+    "sequence": 1,
+    "command": "docker ps",
+    "description": "Check containers"
+  },
+  
+  // ✓ MCP tool call
+  {
+    "sequence": 2,
+    "type": "mcp_tool",
+    "tool": "upload_file",
+    "params": {"local_path": "...", "remote_path": "..."},
+    "description": "Upload config"
+  },
+  
+  // ✓ Another MCP tool call
+  {
+    "sequence": 3,
+    "type": "mcp_tool",
+    "tool": "execute_batch_script",
+    "params": {"script_content": "...", "description": "..."},
+    "description": "Run diagnostics"
+  }
+]
+```
+
+#### Output Handling
+
+**Batch Scripts:**
+- **Full log downloaded** to Windows PC: `C:\Users\h4ren\mcp_batch_logs\batch_output_TIMESTAMP.log`
+- Claude receives **summary** (steps completed, errors, preview)
+- User can review **complete output** from local log file
+- Logs persist on PC for later analysis
+
+**Recipes:**
+- **Execution results** returned in MCP response
+- Claude receives **per-step results** (command output, status, errors)
+- No automatic log file download (unless recipe includes download step)
+- Results available in database for tracking
+
+### Practical Examples
+
+#### Batch Script Use Case
+
+**Scenario:** "Something is wrong with PostgreSQL, investigate"
+
+```
+User: Investigate PostgreSQL issues
+Claude: I'll create a diagnostic batch script...
+
+Script:
+- docker ps (check if running)
+- docker logs thermostat_postgres --tail 50
+- docker inspect thermostat_postgres | grep Port
+- ss -tunlp | grep 5433
+- docker stats --no-stream thermostat_postgres
+
+Execution: Single MCP call, 2 seconds
+Output: Full log downloaded to C:\Users\h4ren\mcp_batch_logs\
+Result: Claude analyzes log and explains issue
+```
+
+**Why batch:** Simple sequence, all shell commands, fast execution
+
+#### Recipe Use Case
+
+**Scenario:** "Deploy application to server" (you'll do this repeatedly)
+
+```
+User: Create a recipe for application deployment
+Claude: I'll create a deployment recipe...
+
+Recipe steps:
+1. Shell: Stop existing container
+2. MCP: Upload new application files via SFTP
+3. Shell: Build docker image
+4. Shell: Start new container
+5. MCP: Execute batch diagnostics to verify
+6. MCP: Download logs for verification
+
+Execution options:
+- Atomic: Execute all 6 steps in one call
+- Step-by-step: Run step 1, verify, run step 2, verify...
+
+Result: Stored in database, reusable, tracks usage stats
+```
+
+**Why recipe:** Mix of shell + MCP tools, reusable, flexible execution
+
+### Choosing Between Batch and Recipe
+
+**Choose Batch Script when:**
+- ✓ All commands are Linux shell commands
+- ✓ Sequence is deterministic (no branching)
+- ✓ You want atomic, fast execution
+- ✓ You need full logs downloaded to PC
+- ✓ Typical use: diagnostics, investigation, verification
+
+**Choose Recipe when:**
+- ✓ You need to mix shell commands + MCP tools
+- ✓ You'll run this workflow multiple times
+- ✓ You want flexible execution (atomic OR step-by-step)
+- ✓ You want to track usage statistics
+- ✓ Typical use: deployments, complex workflows, procedures with file transfers
+
+**Both are stored in database and tracked in conversation history.**
+
+### Summary
+
+- **Batch:** Fast, atomic, shell-only, log-to-PC, for deterministic sequences
+- **Recipe:** Flexible, multi-tool, reusable, result-in-response, for complex workflows
+
+Choose based on your needs - simple shell sequences (batch) or complex multi-tool workflows (recipe).
+
+---
+
 
 ## Web Terminal Interface
 

@@ -54,7 +54,11 @@
           "type": "select",
           "required": true,
           "label": "Final Status",
-          "options": ["success", "failed", "rolled_back"]
+          "options": [
+            "success",
+            "failed",
+            "rolled_back"
+          ]
         },
         {
           "name": "user_notes",
@@ -99,7 +103,14 @@
           "type": "select",
           "required": false,
           "label": "Status Filter",
-          "options": ["all", "in_progress", "paused", "success", "failed", "rolled_back"]
+          "options": [
+            "all",
+            "in_progress",
+            "paused",
+            "success",
+            "failed",
+            "rolled_back"
+          ]
         },
         {
           "name": "limit",
@@ -127,7 +138,9 @@
           "type": "select",
           "required": true,
           "label": "Status",
-          "options": ["undone"]
+          "options": [
+            "undone"
+          ]
         }
       ]
     },
@@ -192,9 +205,9 @@
       "arguments": [
         {
           "name": "recipe_id",
-          "type": "number",
+          "type": "recipe_select",
           "required": true,
-          "label": "Recipe ID"
+          "label": "Select Recipe"
         }
       ]
     },
@@ -204,9 +217,9 @@
       "arguments": [
         {
           "name": "recipe_id",
-          "type": "number",
+          "type": "recipe_select",
           "required": true,
-          "label": "Recipe ID"
+          "label": "Select Recipe to Execute"
         },
         {
           "name": "server_identifier",
@@ -227,6 +240,112 @@
           "required": false,
           "label": "Conversation Goal (optional)",
           "placeholder": "Execute recipe: wifi_diagnostics"
+        }
+      ]
+    },
+    {
+      "name": "delete_recipe",
+      "description": "Delete a recipe (soft delete with confirmation)",
+      "arguments": [
+        {
+          "required": true,
+          "type": "recipe_select",
+          "label": "Select Recipe to Delete",
+          "name": "recipe_id"
+        },
+        {
+          "required": false,
+          "type": "checkbox",
+          "label": "Confirm deletion",
+          "name": "confirm",
+          "default": false
+        }
+      ]
+    },
+    {
+      "name": "create_recipe_from_commands",
+      "description": "Create recipe from command list (manual creation)",
+      "arguments": [
+        {
+          "placeholder": "wifi_setup",
+          "required": true,
+          "type": "text",
+          "label": "Recipe Name",
+          "name": "name"
+        },
+        {
+          "rows": 3,
+          "required": true,
+          "type": "textarea",
+          "label": "Description",
+          "name": "description"
+        },
+        {
+          "placeholder": "[{\"sequence\": 1, \"command\": \"ls -la\"}]",
+          "required": true,
+          "name": "commands",
+          "type": "textarea",
+          "rows": 10,
+          "label": "Commands (JSON array)"
+        },
+        {
+          "required": false,
+          "type": "text",
+          "label": "Prerequisites (optional)",
+          "name": "prerequisites"
+        },
+        {
+          "required": false,
+          "type": "text",
+          "label": "Success Criteria (optional)",
+          "name": "success_criteria"
+        }
+      ]
+    },
+    {
+      "name": "update_recipe",
+      "description": "Update an existing recipe in-place (preserves ID and usage stats)",
+      "special": "update_recipe_form",
+      "arguments": [
+        {
+          "name": "recipe_id",
+          "type": "recipe_select",
+          "required": true,
+          "label": "Select Recipe to Update"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "label": "Recipe Name",
+          "placeholder": "docker_diagnostics_v2"
+        },
+        {
+          "name": "description",
+          "type": "textarea",
+          "required": false,
+          "label": "Description",
+          "rows": 3
+        },
+        {
+          "name": "commands",
+          "type": "textarea",
+          "required": false,
+          "label": "Commands JSON (replaces all)",
+          "rows": 10,
+          "placeholder": "[{\"sequence\": 1, \"command\": \"ls -la\"}]"
+        },
+        {
+          "name": "prerequisites",
+          "type": "text",
+          "required": false,
+          "label": "Prerequisites"
+        },
+        {
+          "name": "success_criteria",
+          "type": "text",
+          "required": false,
+          "label": "Success Criteria"
         }
       ]
     },

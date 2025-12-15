@@ -82,6 +82,44 @@ class WebTerminalServer:
         except Exception as e:
             logger.warning(f"Could not open browser: {e}")
     
+    def stop(self):
+        """Stop the web terminal server and close all WebSocket connections"""
+        if not self.is_running():
+            logger.info("Web terminal not running")
+            return
+        
+        logger.info("Stopping web terminal server...")
+        
+        # Close all active WebSocket connections
+        with self._ws_lock:
+            websocket_count = len(self.active_websockets)
+            if websocket_count > 0:
+                logger.info(f"Closing {websocket_count} active WebSocket connection(s)...")
+                
+                # Create a copy of the set to avoid modification during iteration
+                websockets_to_close = list(self.active_websockets)
+                
+                for ws in websockets_to_close:
+                    try:
+                        # Send shutdown message
+                        import asyncio
+                        loop = asyncio.new_event_loop()
+                        loop.run_until_complete(ws.send_json({
+                            'type': 'server_shutdown',
+                            'message': 'Server is shutting down'
+                        }))
+                        loop.run_until_complete(ws.close())
+                        loop.close()
+                    except Exception as e:
+                        logger.debug(f"Error closing WebSocket: {e}")
+                
+                self.active_websockets.clear()
+                logger.info(f"Closed {websocket_count} WebSocket connection(s)")
+        
+        # Stop the server
+        self.shared_state.web_server_running = False
+        logger.info("Web terminal server stopped")
+    
     async def _broadcast_output_loop(self):
         """
         Background task that broadcasts SSH output to all connected WebSockets
@@ -283,13 +321,24 @@ class WebTerminalServer:
                     f'Remote Terminal | Connected to: {self.get_connection_display()}'
                 ))
             
-            # Run server
+            # # Run server
+            # ui.run(
+            #     host=self.config.server.host,
+            #     port=self.config.server.port,
+            #     title='Remote Terminal',
+            #     show=False,
+            #     reload=False
+            # )
+            
+            # Run server with socket reuse enabled for immediate restart
+            import socket
             ui.run(
                 host=self.config.server.host,
                 port=self.config.server.port,
                 title='Remote Terminal',
                 show=False,
-                reload=False
+                reload=False,
+                timeout_graceful_shutdown=1
             )
             
             sys.stdout = old_stdout

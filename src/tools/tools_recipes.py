@@ -9,6 +9,7 @@ from database_manager import DatabaseManager
 import json
 from .tools_hosts import _select_server
 from .tools_conversations import _start_conversation, _end_conversation
+from .decorators import requires_connection
 
 #from .tools_commands import _execute_command
 #from .tools_batch import _execute_batch_script
@@ -121,9 +122,6 @@ RETURNS:
                 "required": ["recipe_id"]
             }
         ),
-        
-   
-
         types.Tool(
             name="execute_recipe",
             description="""Execute a saved recipe on current or specified server.
@@ -152,10 +150,127 @@ Handles both shell commands and MCP tool calls automatically.
                 },
                 "required": ["recipe_id"]
             }
-        )      
+        ),      
+        types.Tool(
+            name="delete_recipe",
+            description="""Delete a recipe (nard delete - not recoverable).
+
+USAGE:
+- First call without confirm=true to see recipe details
+- Second call with confirm=true to actually delete
+- Deleted recipes are hidden but preserved in database
+
+IMPORTANT: This requires confirmation to prevent accidental deletion.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "recipe_id": {
+                        "type": "integer",
+                        "description": "Recipe ID to delete"
+                    },
+                    "confirm": {
+                        "type": "boolean",
+                        "description": "Confirmation flag (set to true to proceed)",
+                        "default": False
+                    }
+                },
+                "required": ["recipe_id"]
+            }
+        ),
+        types.Tool(
+            name="create_recipe_from_commands",
+            description="""Create a recipe from a command list (no conversation required).
+
+Use this to:
+- Build recipes manually without executing first
+- Create recipes from documentation
+- Combine commands from multiple sources
+
+COMMAND TYPES:
+1. Shell: {"sequence": 1, "command": "ls -la", "description": "List"}
+2. MCP: {"sequence": 2, "type": "mcp_tool", "tool": "execute_batch_script", "params": {...}}
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Recipe name (must be unique)"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Detailed description"
+                    },
+                    "commands": {
+                        "type": "array",
+                        "description": "List of commands",
+                        "items": {"type": "object"}
+                    },
+                    "prerequisites": {
+                        "type": "string",
+                        "description": "Optional: System requirements",
+                        "default": ""
+                    },
+                    "success_criteria": {
+                        "type": "string",
+                        "description": "Optional: How to verify success",
+                        "default": ""
+                    }
+                },
+                "required": ["name", "description", "commands"]
+            }
+        ),
+        types.Tool(
+            name="update_recipe",
+            description="""Update an existing recipe in-place (preserves ID and usage stats).
+
+Allows modifying any recipe fields while keeping the same recipe ID.
+Only updates fields you specify - all other fields remain unchanged.
+
+USAGE:
+- Specify recipe_id and any fields you want to update
+- Fields not specified will remain unchanged
+- Preserves: recipe ID, created_at, times_used, last_used_at
+- Updates: any fields you provide
+
+IMPORTANT: This modifies the recipe in-place. The old version is not saved.
+If you want to keep both versions, use create_recipe_from_commands instead.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "recipe_id": {
+                        "type": "integer",
+                        "description": "Recipe ID to update"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Optional: New recipe name"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Optional: New description"
+                    },
+                    "commands": {
+                        "type": "array",
+                        "description": "Optional: New command sequence (replaces all commands)",
+                        "items": {"type": "object"}
+                    },
+                    "prerequisites": {
+                        "type": "string",
+                        "description": "Optional: New prerequisites"
+                    },
+                    "success_criteria": {
+                        "type": "string",
+                        "description": "Optional: New success criteria"
+                    }
+                },
+                "required": ["recipe_id"]
+            }
+        ),
     ]
-
-
+    
 def _convert_datetimes_to_strings(obj):
     """Recursively convert all datetime objects to strings"""
     from datetime import datetime
@@ -171,7 +286,9 @@ def _convert_datetimes_to_strings(obj):
 
 
 
-async def handle_call(name: str, arguments: dict, shared_state, config, database: DatabaseManager, web_server=None, **kwargs) -> list[types.TextContent]:
+async def handle_call(name: str, arguments: dict, shared_state, config, 
+                      database: DatabaseManager, web_server=None,  
+                      hosts_manager=None, **kwargs) -> list[types.TextContent]:
     """Handle recipe management tool calls"""
 
     if name == "create_recipe":
@@ -184,8 +301,28 @@ async def handle_call(name: str, arguments: dict, shared_state, config, database
         return await _get_recipe(database, arguments)
     
     elif name == "execute_recipe":
-        return await _execute_recipe(database, arguments, shared_state, config, web_server)
+        
+        return await _execute_recipe(
+            database=database,
+            arguments=arguments,
+            shared_state=shared_state,
+            config=config,
+            web_server=web_server,
+            hosts_manager=hosts_manager
+        )
     
+    
+    elif name == "delete_recipe":
+        return await _delete_recipe(database, arguments)
+    
+    elif name == "create_recipe_from_commands":
+        return await _create_recipe_from_commands(database, arguments)
+    
+   
+    elif name == "update_recipe":
+        return await _update_recipe(database, arguments)
+    
+   
     # Not our tool
     return None
 
@@ -336,7 +473,6 @@ async def _list_recipes(database: DatabaseManager, arguments: dict):
     limit = arguments.get("limit", 50)
     
     recipes = database.list_recipes(limit)
-    
     # Convert datetimes and handle command_sequence
     for recipe in recipes:
         if recipe.get('command_sequence'):
@@ -395,7 +531,325 @@ async def _get_recipe(database: DatabaseManager, arguments: dict):
     )]
   
 
-async def _execute_recipe(database: DatabaseManager, arguments: dict, shared_state, config, web_server):
+
+
+async def _delete_recipe(database: DatabaseManager, arguments: dict):
+    """Delete a recipe with confirmation (hard delete)"""
+    import json
+    
+    recipe_id = arguments["recipe_id"]
+    confirm = arguments.get("confirm", False)
+    
+    # Get recipe
+    recipe = database.get_recipe(recipe_id)
+    if not recipe:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"error": "Recipe not found"}, indent=2)
+        )]
+    
+    # Step 1: Show confirmation
+    if not confirm:
+        desc = recipe['description']
+        if len(desc) > 200:
+            desc = desc[:200] + "..."
+        
+        # Parse command sequence
+        cmd_seq = recipe.get('command_sequence')
+        if isinstance(cmd_seq, str):
+            cmd_seq = json.loads(cmd_seq)
+        cmd_count = len(cmd_seq) if cmd_seq else 0
+        
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "warning": "This will PERMANENTLY delete the recipe",
+                "recipe_id": recipe_id,
+                "recipe_name": recipe['name'],
+                "recipe_description": desc,
+                "command_count": cmd_count,
+                "times_used": recipe['times_used'],
+                "last_used": str(recipe.get('last_used_at')) if recipe.get('last_used_at') else "Never",
+                "confirm_required": True,
+                "instruction": "To proceed, call delete_recipe again with confirm=true"
+            }, indent=2)
+        )]
+    
+    # Step 2: Hard delete
+    try:
+        cursor = database.conn.cursor()
+        cursor.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        database.conn.commit()
+        success = cursor.rowcount > 0
+    except Exception as e:
+        database.conn.rollback()
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"error": f"Failed to delete recipe: {str(e)}"}, indent=2)
+        )]
+    
+    if not success:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"error": "Recipe not found or already deleted"}, indent=2)
+        )]
+    
+    return [types.TextContent(
+        type="text",
+        text=json.dumps({
+            "success": True,
+            "message": f"Recipe '{recipe['name']}' permanently deleted",
+            "recipe_id": recipe_id
+        }, indent=2)
+    )]
+
+
+
+
+async def _create_recipe_from_commands(database: DatabaseManager, arguments: dict):
+    """Create recipe from command list"""
+    import json
+    
+    name = arguments["name"]
+    description = arguments["description"]
+    commands = arguments["commands"]
+    prerequisites = arguments.get("prerequisites", "")
+    success_criteria = arguments.get("success_criteria", "")
+    
+    # Validate
+    if not commands or len(commands) == 0:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"error": "Must provide at least one command"}, indent=2)
+        )]
+    
+    # Process commands
+    for idx, cmd in enumerate(commands):
+        if 'sequence' not in cmd:
+            cmd['sequence'] = idx + 1
+        
+        # Must have either 'command' or be MCP tool
+        if 'command' not in cmd and cmd.get('type') != 'mcp_tool':
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "error": f"Command {idx+1} missing 'command' or 'type'='mcp_tool'",
+                    "command": cmd
+                }, indent=2)
+            )]
+        
+        if cmd.get('type') == 'mcp_tool' and 'tool' not in cmd:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "error": f"MCP command {idx+1} missing 'tool' field",
+                    "command": cmd
+                }, indent=2)
+            )]
+        
+        if 'expected_success' not in cmd:
+            cmd['expected_success'] = True
+    
+    # Check duplicates
+    sequences = [cmd['sequence'] for cmd in commands]
+    if len(sequences) != len(set(sequences)):
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": "Duplicate sequence numbers",
+                "sequences": sequences
+            }, indent=2)
+        )]
+    
+    # Sort and create
+    commands_sorted = sorted(commands, key=lambda x: x['sequence'])
+    
+    recipe_id = database.create_recipe(
+        name=name,
+        description=description,
+        command_sequence=commands_sorted,
+        prerequisites=prerequisites or None,
+        success_criteria=success_criteria or None,
+        source_conversation_id=None,
+        created_by="claude"
+    )
+    
+    if not recipe_id:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": "Failed to create recipe (name may already exist)"
+            }, indent=2)
+        )]
+    
+    return [types.TextContent(
+        type="text",
+        text=json.dumps({
+            "success": True,
+            "recipe_id": recipe_id,
+            "name": name,
+            "command_count": len(commands_sorted),
+            "message": f"Recipe '{name}' created with {len(commands_sorted)} commands",
+            "note": "Test recipe with execute_recipe before using in production"
+        }, indent=2)
+    )]
+
+
+
+async def _update_recipe(database: DatabaseManager, arguments: dict):
+    """Update an existing recipe in-place"""
+    import json
+    
+    recipe_id = arguments["recipe_id"]
+    
+    # Get existing recipe
+    recipe = database.get_recipe(recipe_id)
+    if not recipe:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"error": "Recipe not found"}, indent=2)
+        )]
+    
+    # Collect updates
+    updates = {}
+    updated_fields = []
+    
+    # Name
+    if "name" in arguments:
+        updates['name'] = arguments['name']
+        updated_fields.append("name")
+    
+    # Description
+    if "description" in arguments:
+        updates['description'] = arguments['description']
+        updated_fields.append("description")
+    
+    # Prerequisites
+    if "prerequisites" in arguments:
+        updates['prerequisites'] = arguments['prerequisites']
+        updated_fields.append("prerequisites")
+    
+    # Success criteria
+    if "success_criteria" in arguments:
+        updates['success_criteria'] = arguments['success_criteria']
+        updated_fields.append("success_criteria")
+    
+    # Commands (validate and process)
+    if "commands" in arguments:
+        commands = arguments["commands"]
+        
+        # Validate
+        if not commands or len(commands) == 0:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({"error": "Commands array cannot be empty"}, indent=2)
+            )]
+        
+        # Process commands (same validation as create_recipe_from_commands)
+        for idx, cmd in enumerate(commands):
+            if 'sequence' not in cmd:
+                cmd['sequence'] = idx + 1
+            
+            # Must have either 'command' or be MCP tool
+            if 'command' not in cmd and cmd.get('type') != 'mcp_tool':
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "error": f"Command {idx+1} missing 'command' or 'type'='mcp_tool'",
+                        "command": cmd
+                    }, indent=2)
+                )]
+            
+            if cmd.get('type') == 'mcp_tool' and 'tool' not in cmd:
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "error": f"MCP command {idx+1} missing 'tool' field",
+                        "command": cmd
+                    }, indent=2)
+                )]
+            
+            if 'expected_success' not in cmd:
+                cmd['expected_success'] = True
+        
+        # Check duplicates
+        sequences = [cmd['sequence'] for cmd in commands]
+        if len(sequences) != len(set(sequences)):
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "error": "Duplicate sequence numbers",
+                    "sequences": sequences
+                }, indent=2)
+            )]
+        
+        # Sort and store
+        commands_sorted = sorted(commands, key=lambda x: x['sequence'])
+        updates['command_sequence'] = json.dumps(commands_sorted)
+        updated_fields.append("commands")
+    
+    # Check if anything to update
+    if not updates:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": "No fields to update",
+                "instruction": "Provide at least one field to update: name, description, commands, prerequisites, or success_criteria"
+            }, indent=2)
+        )]
+    
+    # Update recipe in database
+    try:
+        cursor = database.conn.cursor()
+        
+        # Build UPDATE query
+        set_clauses = []
+        values = []
+        
+        for field, value in updates.items():
+            set_clauses.append(f"{field} = ?")
+            values.append(value)
+        
+        # Add recipe_id for WHERE clause
+        values.append(recipe_id)
+        
+        query = f"UPDATE recipes SET {', '.join(set_clauses)} WHERE id = ?"
+        cursor.execute(query, values)
+        database.conn.commit()
+        
+        # Get updated recipe
+        updated_recipe = database.get_recipe(recipe_id)
+        
+        # Parse command_sequence for count
+        if isinstance(updated_recipe['command_sequence'], str):
+            updated_recipe['command_sequence'] = json.loads(updated_recipe['command_sequence'])
+        
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "success": True,
+                "recipe_id": recipe_id,
+                "recipe_name": updated_recipe['name'],
+                "updated_fields": updated_fields,
+                "command_count": len(updated_recipe['command_sequence']),
+                "message": f"Recipe {recipe_id} updated successfully",
+                "note": "Recipe ID and usage statistics preserved"
+            }, indent=2)
+        )]
+        
+    except Exception as e:
+        database.conn.rollback()
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": f"Failed to update recipe: {str(e)}"
+            }, indent=2)
+        )]
+
+@requires_connection
+
+@requires_connection
+async def _execute_recipe(database, arguments, shared_state, config, web_server, hosts_manager):
     """Execute a recipe on current or specified server"""
     
     recipe_id = arguments["recipe_id"]
@@ -505,16 +959,17 @@ async def _execute_recipe(database: DatabaseManager, arguments: dict, shared_sta
             else:
                 # Regular shell command
                 result = await execute_command_with_track(
-                    shared_state,           # positional arg 1
-                    config,                 # positional arg 2
-                    web_server,             # positional arg 3
-                    cmd['command'],         # command (positional arg 4)
-                    10,                     # timeout (positional arg 5)
-                    'auto',                 # output_mode (positional arg 6)
-                    database,               # database (positional arg 7)
-                    conversation_id         # conversation_id (positional arg 8)
+                    shared_state=shared_state,
+                    config=config,
+                    web_server=web_server,
+                    command=cmd['command'],
+                    timeout=10,
+                    output_mode='auto',
+                    database=database,
+                    hosts_manager=hosts_manager,
+                    conversation_id=conversation_id
                 )
-                
+                                
                 # Regular commands return JSON
                 if not result or len(result) == 0:
                     raise ValueError(f"Command returned no result")

@@ -112,3 +112,30 @@
     color: #666;
     font-style: italic;
 }
+
+
+
+.json-editor {
+    width: 100%;
+    min-height: 200px;
+    padding: 10px;
+    background: #0d1117;
+    border: 2px solid #444 !important;
+    border-radius: 4px;
+    color: #c9d1d9;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: auto;
+    white-space: pre;
+    display: block;
+    box-sizing: border-box;
+}
+
+.json-editor:focus {
+    border-color: #58a6ff !important;
+    outline: none;
+}
+
+
+

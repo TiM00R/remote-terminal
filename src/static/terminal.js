@@ -78,28 +78,87 @@
             console.error('WebSocket error:', error);
         };
         
-        ws.onclose = () => {
-            console.log('WebSocket closed');
+        // ws.onclose = () => {
+        //     console.log('WebSocket closed');
             
-            // Don't reconnect if this was intentional (page unload)
-            if (intentionalClose) {
-                console.log('WebSocket closed intentionally (page unload)');
-                return;
-            }
+        //     // Don't reconnect if this was intentional (page unload)
+        //     if (intentionalClose) {
+        //         console.log('WebSocket closed intentionally (page unload)');
+        //         return;
+        //     }
             
-            term.writeln('\r\n✗ WebSocket disconnected');
+        //     term.writeln('\r\n✗ WebSocket disconnected');
             
-            // Attempt reconnection
-            if (reconnectAttempts < maxReconnectAttempts) {
-                reconnectAttempts++;
-                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-                term.writeln(`  Reconnecting in ${delay/1000}s... (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+        //     // Attempt reconnection
+        //     if (reconnectAttempts < maxReconnectAttempts) {
+        //         reconnectAttempts++;
+        //         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+        //         term.writeln(`  Reconnecting in ${delay/1000}s... (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
                 
-                setTimeout(connectWebSocket, delay);
-            } else {
-                term.writeln('  Max reconnection attempts reached. Please refresh the page.');
-            }
-        };
+        //         setTimeout(connectWebSocket, delay);
+        //     } else {
+        //         term.writeln('  Max reconnection attempts reached. Please refresh the page.');
+        //     }
+        // };
+
+
+        
+        // ws.onclose = (event) => {
+        //     console.log('WebSocket closed', event.code, event.reason);
+
+        //     // If the user is navigating away / closing the tab, do nothing special
+        //     if (intentionalClose) {
+        //         console.log('WebSocket closed intentionally (page unload)');
+        //         return;
+        //     }
+
+        //     term.writeln('\r\n✗ WebSocket disconnected (server offline)');
+        //     term.writeln('  This tab will close automatically in 2 seconds...');
+
+        //     // Try to close the tab – in most browsers this works if the tab
+        //     // was opened programmatically (e.g., your Python app launched it).
+        //     setTimeout(() => {
+        //         try {
+        //             window.close();
+        //         } catch (e) {
+        //             console.warn('Unable to close window programmatically:', e);
+        //             // Fallback: at least stop sending input
+        //             term.writeln('\r\nYou can now close this browser tab.');
+        //         }
+        //     }, 2000);
+        // };
+
+
+
+    ws.onclose = () => {
+        console.log("WebSocket closed");
+
+        if (intentionalClose) {
+            console.log("Intentional close, ignoring.");
+            return;
+        }
+
+        term.writeln("\r\n✗ WebSocket disconnected (server offline)");
+        
+        // Try to close the window, but detect if it fails
+        const canClose = window.close(); 
+
+        // If the browser rejected the close request (tab not opened via JS)
+        if (!canClose) {
+            term.writeln("  Unable to auto-close this tab. Please close manually.");
+            // Stop further reconnect attempts or repeated messages
+            ws = null;
+            return;
+        }
+
+        // If close succeeded, do nothing further
+        setTimeout(() => {}, 2000);
+    };
+
+
+
+
+
     }
     
     // FIXED: Close WebSocket when page unloads
@@ -111,6 +170,16 @@
         }
     });
     
+    // FIXED: Force reconnect when tab becomes visible again (handles server restart)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && ws && ws.readyState !== WebSocket.OPEN) {
+            console.log('Tab became visible with dead connection - forcing reconnect');
+            intentionalClose = false;
+            reconnectAttempts = 0;
+            connectWebSocket();
+        }
+    });
+
     // Initial connection
     connectWebSocket();
     

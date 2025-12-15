@@ -232,7 +232,9 @@ def _convert_datetimes_to_strings(obj):
         return obj
 
 
-async def handle_call(name: str, arguments: dict, shared_state, config, database: DatabaseManager, **kwargs) -> list[types.TextContent]:
+async def handle_call(name: str, arguments: dict, shared_state, config, 
+                      database: DatabaseManager, hosts_manager=None, 
+                      **kwargs) -> list[types.TextContent]:
     """Handle conversation management tool calls - Phase 1 Enhanced"""
     
     if name == "start_conversation":

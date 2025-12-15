@@ -199,7 +199,7 @@ NEVER execute commands without first getting user's choice when open_conversatio
 
 async def handle_call(name: str, arguments: dict, hosts_manager, ssh_manager, 
                       shared_state, database=None, 
-                      web_server=None, **kwargs) -> list[types.TextContent]:
+                      web_server=None,  **kwargs) -> list[types.TextContent]:
     """Handle host management tool calls - Phase 1 Enhanced"""
     
     if name == "list_servers":

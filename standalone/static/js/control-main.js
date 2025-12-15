@@ -11,6 +11,7 @@ const CATEGORY_NAMES = {
 let currentCategory = 'commands';
 let currentTool = null;
 let allToolSchemas = {};
+let cachedRecipes = null; // Cache for recipes list
 
 // Initialize on page load
 async function init() {
@@ -111,10 +112,67 @@ async function loadCategory(category) {
     
     // Reset current tool
     currentTool = null;
+    
+    // If switching to workflows, clear recipe cache to force fresh load
+    if (category === 'workflows') {
+        cachedRecipes = null;
+        console.log('Switched to workflows - recipe cache cleared');
+    }
+}
+
+// Load recipes for workflows tab
+async function loadRecipes() {
+    if (cachedRecipes !== null) {
+        console.log('Using cached recipes:', cachedRecipes.length);
+        return cachedRecipes; // Return cached data
+    }
+    
+    console.log('Loading recipes from server...');
+    try {
+        const response = await fetch('http://localhost:8081/execute_mcp_tool', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tool: 'list_recipes',
+                arguments: { limit: 200 }
+            })
+        });
+        
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        // The execute_mcp_tool endpoint returns the parsed JSON directly:
+        // {count: 1, recipes: [...]}
+        // NOT wrapped in {success: true, result: {...}}
+        
+        if (data.recipes && Array.isArray(data.recipes)) {
+            cachedRecipes = data.recipes;
+            console.log('Loaded recipes:', cachedRecipes.length, 'recipes');
+            return cachedRecipes;
+        } else if (data.error) {
+            console.error('API returned error:', data.error);
+            cachedRecipes = [];
+            return [];
+        } else {
+            console.error('Unexpected API response format:', data);
+            cachedRecipes = [];
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading recipes:', error);
+        cachedRecipes = []; // Cache empty array to prevent repeated failures
+        return [];
+    }
+}
+
+// Get cached recipes (for use in forms)
+function getCachedRecipes() {
+    console.log('getCachedRecipes called, cachedRecipes:', cachedRecipes);
+    return cachedRecipes || [];
 }
 
 // Handle tool selection
-function handleToolSelection() {
+async function handleToolSelection() {
     const toolName = document.getElementById('toolSelect').value;
     
     if (!toolName) {
@@ -138,6 +196,14 @@ function handleToolSelection() {
     // Update description
     document.getElementById('toolDescription').textContent = tool.description;
     
+    // If in workflows category AND tool uses recipe_select, load them first
+    const needsRecipes = tool.arguments && tool.arguments.some(arg => arg.type === 'recipe_select');
+    if (currentCategory === 'workflows' && needsRecipes) {
+        console.log('Tool needs recipes, loading...');
+        await loadRecipes();
+        console.log('Recipes loaded, generating form');
+    }
+
     // Generate form
     generateForm(tool);
 }
@@ -246,5 +312,6 @@ async function switchServer() {
 window.controlMain = {
     init,
     handleToolSelection,
-    switchServer
+    switchServer,
+    getCachedRecipes
 };

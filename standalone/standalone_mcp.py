@@ -256,6 +256,39 @@ def main():
     
     global g_config, g_shared_state, g_db_manager, g_hosts_manager, g_web_terminal
     
+    # Check if ports are in use and wait for release
+    import socket
+    import time
+    
+    def wait_for_port(port, max_wait=5):
+        """Wait for port to become available"""
+        for i in range(max_wait):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            try:
+                sock.bind(('0.0.0.0', port))
+                sock.close()
+                return True  # Port is free
+            except OSError:
+                if i == 0:
+                    print(f"Port {port} is in use, waiting for release...")
+                time.sleep(1)
+                sock.close()
+        return False
+    
+    # Wait for both ports to be free
+    if not wait_for_port(8081, max_wait=5):
+        print("ERROR: Port 8081 still in use after 5 seconds")
+        print("Please close all browser tabs on port 8081 and try again")
+        sys.exit(1)
+    
+    if not wait_for_port(8082, max_wait=5):
+        print("ERROR: Port 8082 still in use after 5 seconds") 
+        print("Please close all browser tabs on port 8082 and try again")
+        sys.exit(1)
+    
+    
+    
     print("=" * 60)
     print("Remote Terminal - Standalone MCP Mode (Multi-Tool)")
     print("=" * 60)
@@ -432,13 +465,20 @@ def main():
         allow_headers=['*']
     )
     
-    # Run control server
+    
+    # Run control server with socket reuse enabled
+    import socket
     config_uvicorn = uvicorn.Config(
         app,
         host='0.0.0.0',
         port=control_port,
-        log_level='warning'
+        log_level='warning',
+        timeout_graceful_shutdown=1  # Fast shutdown
     )
+    
+    # Enable SO_REUSEADDR to allow immediate port reuse after restart
+    config_uvicorn.server_header = False
+    
     
     server = uvicorn.Server(config_uvicorn)
     
@@ -453,6 +493,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         pass
+    
     finally:
         # Graceful shutdown
         print()
@@ -460,6 +501,10 @@ if __name__ == "__main__":
         print("=" * 60)
         print("Shutting down gracefully...")
         print("=" * 60)
+        
+        if g_web_terminal:
+            print("Closing web terminal and WebSocket connections...")
+            g_web_terminal.stop()
         
         if g_shared_state and g_shared_state.ssh_manager:
             print("Disconnecting SSH...")

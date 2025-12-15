@@ -11,6 +11,7 @@ from datetime import datetime
 from mcp import types
 from batch_executor import execute_batch_script, create_diagnostic_script
 from database_batch import BatchDatabaseOperations
+from .tools_commands import requires_connection
 
 logger = logging.getLogger(__name__)
 
@@ -131,20 +132,22 @@ commands = [
     ]
 
 
-async def handle_call(name: str, arguments: dict, shared_state, config, web_server, database=None, **kwargs) -> list[types.TextContent]:
+async def handle_call(name: str, arguments: dict, shared_state, config, web_server,
+                      database=None, hosts_manager=None, **kwargs) -> list[types.TextContent]:
     """Handle batch execution tool calls - with database integration"""
     
     if name == "execute_batch_script":
         return await _execute_batch_script(
-            arguments.get("script_content"),
-            arguments.get("description"),
-            arguments.get("timeout", 300),
-            arguments.get("output_mode", "summary"),
-            shared_state,
-            config,
-            web_server,
-            database,
-            arguments.get("conversation_id")  
+            script_content=arguments.get("script_content"),
+            description=arguments.get("description"),
+            timeout=arguments.get("timeout", 300),
+            output_mode=arguments.get("output_mode", "summary"),
+            shared_state=shared_state,
+            config=config,
+            web_server=web_server,
+            database=database,
+            hosts_manager=hosts_manager,
+            conversation_id=arguments.get("conversation_id")
         )
     
     elif name == "create_diagnostic_script":
@@ -156,7 +159,7 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
     # Not our tool, return None
     return None
 
-
+@requires_connection
 async def _execute_batch_script(
     script_content: str,
     description: str,
@@ -166,6 +169,7 @@ async def _execute_batch_script(
     config,
     web_server,
     database=None,
+    hosts_manager=None,  
     conversation_id=None 
 ) -> list[types.TextContent]:
     """Execute batch script on remote server with database tracking"""

@@ -19,6 +19,8 @@ from utils import is_error_output, extract_error_context, count_lines
 
 logger = logging.getLogger(__name__)
 
+# Import the shared decorator
+from .decorators import requires_connection
 
 async def get_tools(**kwargs) -> list[types.Tool]:
     """Get list of command execution tools"""
@@ -178,7 +180,10 @@ RETURN VALUES:
     ]
 
 
-async def handle_call(name: str, arguments: dict, shared_state, config, web_server, database=None, **kwargs) -> list[types.TextContent]:
+
+async def handle_call(name: str, arguments: dict, shared_state, config,
+                      web_server, database=None, 
+                      hosts_manager=None, **kwargs) -> list[types.TextContent]:
     """Handle command execution tool calls - Phase 1 Enhanced"""
     
     if name == "execute_command":
@@ -192,11 +197,14 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
                 logger.debug(f"Auto-injected conversation_id: {conversation_id}")
         
         return await execute_command_with_track(
-            shared_state, config, web_server,
-            arguments["command"],
-            arguments.get("timeout", 10),
-            arguments.get("output_mode", "auto"),
+            shared_state=shared_state,
+            config=config,
+            web_server=web_server,
+            command=arguments["command"],
+            timeout=arguments.get("timeout", 10),
+            output_mode=arguments.get("output_mode", "auto"),
             database=database,
+            hosts_manager=hosts_manager,
             conversation_id=conversation_id
         )
     
@@ -216,10 +224,12 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
     
     elif name == "cancel_command":
         return await _cancel_command(
-            shared_state,
-            arguments["command_id"]
+            shared_state=shared_state,
+            command_id=arguments["command_id"],
+            database=database,
+            hosts_manager=hosts_manager
         )
-    
+        
     elif name == "list_commands":
         return await _list_commands(
             shared_state,
@@ -229,9 +239,10 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
     # Not our tool, return None
     return None
 
-
-async def execute_command_with_track(shared_state, config, web_server, command: str, timeout: int, 
-                                     output_mode: str, database=None, conversation_id=None) -> list[types.TextContent]:
+@requires_connection
+async def execute_command_with_track(*, shared_state, config, web_server, command: str, timeout: int, 
+                                     output_mode: str, database=None, hosts_manager=None, 
+                                     conversation_id=None) -> list[types.TextContent]:
     """
     HIGH-LEVEL command execution with safety features and tracking
     This is called by AI/Claude through MCP
@@ -270,7 +281,15 @@ async def execute_command_with_track(shared_state, config, web_server, command: 
         logger.warning(f"Long timeout requested: {timeout}s for command: {command}")
     
     # PHASE 1: Pre-authenticate sudo if needed (ALWAYS, not just for conversations)
-    preauth_result = await pre_authenticate_sudo(shared_state, config, web_server, command)
+    preauth_result = await pre_authenticate_sudo(
+    shared_state=shared_state,
+    config=config,
+    web_server=web_server,
+    command=command,
+    database=database,
+    hosts_manager=hosts_manager
+)
+    
     
     # PHASE 1: Create backup if needed (ALWAYS, not just for conversations)
     backup_result = await create_backup_if_needed(shared_state, config, web_server, command)
@@ -545,8 +564,9 @@ async def _save_to_database(database, shared_state, command, output, status,
             "warning": "Command execution succeeded but database save failed"
         }
 
-
-async def pre_authenticate_sudo(shared_state, config, web_server, command: str) -> dict:
+@requires_connection
+async def pre_authenticate_sudo(shared_state, config, web_server, command: str,
+                                database=None, hosts_manager=None) -> dict:
     """Pre-authenticate sudo in main session"""
     if 'sudo' not in command or not shared_state.ssh_manager or not shared_state.ssh_manager.password:
         return {"status": "skipped", "reason": "no sudo in command"}
@@ -799,8 +819,9 @@ async def _get_command_output(shared_state, command_id: str, raw: bool) -> list[
     
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
-
-async def _cancel_command(shared_state, command_id: str) -> list[types.TextContent]:
+@requires_connection
+async def _cancel_command(shared_state, command_id: str, 
+                          database=None,  hosts_manager=None) -> list[types.TextContent]:
     """Cancel a running command"""
     state = shared_state.command_registry.get(command_id)
     

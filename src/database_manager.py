@@ -52,7 +52,6 @@ class DatabaseManager:
             
             # Initialize schema if needed
             self._initialize_schema()
-            
             return True
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
@@ -751,4 +750,9 @@ class DatabaseManager:
             self.conn.rollback()
             return False
 
+            return False
+    
+            return False
+    
+            return []
     

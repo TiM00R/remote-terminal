@@ -23,7 +23,8 @@ async def get_tools(**kwargs) -> list[types.Tool]:
     ]
 
 
-async def handle_call(name: str, arguments: dict, shared_state, config, web_server, hosts_manager, **kwargs) -> list[types.TextContent]:
+async def handle_call(name: str, arguments: dict, shared_state, config, web_server, 
+                      hosts_manager=None, **kwargs) -> list[types.TextContent]:
     """Handle information tool calls"""
     
     if name == "get_terminal_status":

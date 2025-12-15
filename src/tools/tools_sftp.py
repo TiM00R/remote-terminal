@@ -1191,7 +1191,7 @@ async def get_tools(**kwargs):
     ]
 
 
-async def handle_call(name: str, arguments: dict, shared_state, **kwargs):
+async def handle_call(name: str, arguments: dict, shared_state, hosts_manager=None, **kwargs):
     """
     Main handler for SFTP tool calls.
     Routes to specific tool functions.

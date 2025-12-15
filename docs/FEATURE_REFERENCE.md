@@ -558,6 +558,40 @@ Create a recipe from conversation 5 named 'wifi_diagnostics'
 
 ---
 
+#### `create_recipe_from_commands`
+Create recipe manually from command list (no conversation required)
+
+**Parameters:**
+- `name` (required): Unique recipe name
+- `description` (required): What the recipe does
+- `commands` (required): Array of command objects with:
+  - `sequence`: Step number
+  - `command`: Shell command OR
+  - `type`: "mcp_tool" (for MCP tool calls)
+  - `tool`: Tool name (if type=mcp_tool)
+  - `params`: Tool parameters (if type=mcp_tool)
+  - `description`: What this step does
+- `prerequisites` (optional): System requirements
+- `success_criteria` (optional): How to verify success
+
+**Returns:**
+- `recipe_id`: New recipe ID
+- `name`: Recipe name
+- `command_count`: Number of commands
+
+**Example:**
+```
+Create a recipe from scratch with these commands: check disk, check memory, check CPU
+```
+
+**Use Cases:**
+- Build recipes from documentation
+- Combine commands from multiple sources
+- Create recipes without executing first
+- Manual recipe construction
+
+---
+
 #### `list_recipes`
 List all available recipes
 
@@ -594,6 +628,64 @@ Get detailed recipe information
 ```
 Show me details of recipe 3
 What's in the wifi_diagnostics recipe?
+```
+
+---
+
+#### `update_recipe`
+Update an existing recipe in-place (preserves ID and usage stats)
+
+**Parameters:**
+- `recipe_id` (required): Recipe ID to update
+- `name` (optional): New recipe name
+- `description` (optional): New description
+- `commands` (optional): New command sequence (replaces all commands)
+- `prerequisites` (optional): New prerequisites
+- `success_criteria` (optional): New success criteria
+
+**Returns:**
+- Updated recipe details
+- Confirmation message
+
+**Important:** 
+- Only updates fields you specify - others remain unchanged
+- Preserves: recipe ID, created_at, times_used, last_used_at
+- This modifies the recipe in-place (old version not saved)
+- To keep both versions, use `create_recipe_from_commands` instead
+
+**Examples:**
+```
+Update recipe 4 to change the description
+Fix the commands in recipe 3
+Rename recipe 5 to 'postgres_diagnostics_v2'
+```
+
+---
+
+#### `delete_recipe`
+Delete a recipe permanently with confirmation (hard delete)
+
+**Parameters:**
+- `recipe_id` (required): Recipe ID to delete
+- `confirm` (optional): Confirmation flag (default: false)
+
+**Returns:**
+- First call (confirm=false): Shows recipe details and asks for confirmation
+- Second call (confirm=true): Deletes recipe and confirms
+
+**Two-Step Process:**
+1. Call without confirm → See what will be deleted
+2. Call with confirm=true → Actually delete
+
+**Important:** 
+- This is a PERMANENT hard delete (not recoverable)
+- Recipe is completely removed from database
+- Two-step confirmation prevents accidents
+
+**Examples:**
+```
+Delete recipe 3
+Delete recipe 5 with confirmation
 ```
 
 ---
