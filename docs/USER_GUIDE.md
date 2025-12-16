@@ -807,7 +807,7 @@ Health check with reporting (shell checks + upload results)
   {
     "sequence": 2,
     "type": "mcp_tool",
-    "tool": "execute_batch_script",
+    "tool": "execute_script_content",
     "params": {"script": "...", "description": "Run diagnostics"},
     "description": "Full system diagnostics"
   },
@@ -829,7 +829,7 @@ Health check with reporting (shell checks + upload results)
 **Batch Scripts:**
 ```
 User: Run network diagnostics
-Claude: [Single MCP call to execute_batch_script]
+Claude: [Single MCP call to execute_script_content]
         ├─ Uploads script to server
         ├─ Executes entire script atomically
         ├─ Downloads full log to PC
@@ -903,7 +903,7 @@ execute_recipe(...)     # Not a shell command
   {
     "sequence": 3,
     "type": "mcp_tool",
-    "tool": "execute_batch_script",
+    "tool": "execute_script_content",
     "params": {"script_content": "...", "description": "..."},
     "description": "Run diagnostics"
   }

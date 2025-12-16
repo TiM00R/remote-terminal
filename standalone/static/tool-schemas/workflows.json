@@ -33,9 +33,9 @@
       "arguments": [
         {
           "name": "conversation_id",
-          "type": "number",
+          "type": "conversation_select",
           "required": true,
-          "label": "Conversation ID"
+          "label": "Select Conversation to Resume"
         }
       ]
     },
@@ -45,9 +45,9 @@
       "arguments": [
         {
           "name": "conversation_id",
-          "type": "number",
+          "type": "conversation_select",
           "required": true,
-          "label": "Conversation ID"
+          "label": "Select Conversation to End"
         },
         {
           "name": "status",
@@ -75,9 +75,9 @@
       "arguments": [
         {
           "name": "conversation_id",
-          "type": "number",
+          "type": "conversation_select",
           "required": true,
-          "label": "Conversation ID"
+          "label": "Select Conversation"
         },
         {
           "name": "reverse_order",
@@ -150,9 +150,9 @@
       "arguments": [
         {
           "name": "conversation_id",
-          "type": "number",
+          "type": "conversation_select",
           "required": true,
-          "label": "Conversation ID"
+          "label": "Select Conversation to Create Recipe From"
         },
         {
           "name": "name",
@@ -348,11 +348,6 @@
           "label": "Success Criteria"
         }
       ]
-    },
-    {
-      "name": "overview",
-      "description": "Get system status and available features",
-      "arguments": []
     }
   ]
 }

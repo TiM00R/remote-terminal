@@ -2,6 +2,26 @@
 
 Quick reference for all MCP tools and capabilities.
 
+---
+
+## Table of Contents
+
+1. [MCP Tools Available to Claude](#mcp-tools-available-to-claude)
+   - [Server Management Tools](#server-management-tools)
+   - [Command Execution Tools](#command-execution-tools)
+   - [Batch Script Execution Tools](#batch-script-execution-tools)
+   - [Batch Script Management Tools](#batch-script-management-tools)
+   - [File Transfer Tools (SFTP)](#file-transfer-tools-sftp)
+   - [Conversation Management Tools](#conversation-management-tools)
+   - [Recipe Management Tools](#recipe-management-tools)
+2. [Batch Script Management Features](#batch-script-management-features)
+3. [Usage Patterns](#usage-patterns)
+4. [Output Filtering Rules](#output-filtering-rules)
+5. [Database Tables](#database-tables)
+6. [Configuration Options](#configuration-options)
+
+---
+
 ## MCP Tools Available to Claude
 
 ### Server Management Tools
@@ -244,10 +264,10 @@ Is the terminal connected?
 
 ---
 
-### Batch Execution Tools
+### Batch Script Execution Tools
 
-#### `execute_batch_script`
-Execute multi-command bash script as atomic operation
+#### `execute_script_content`
+Execute multi-command bash script directly (provide complete script content)
 
 **Parameters:**
 - `script_content` (required): Complete bash script with step markers
@@ -293,14 +313,14 @@ Investigate docker installation status
 
 ---
 
-#### `create_diagnostic_script`
-Helper to create properly formatted diagnostic scripts
+#### `build_script_from_commands`
+Generate a batch script from command list (returns script text, does not execute)
 
 **Parameters:**
 - `commands` (required): List of {description, command} objects
 - `description` (optional): Overall script description
 
-**Returns:** Formatted script ready for execute_batch_script
+**Returns:** Formatted script ready for execute_script_content
 
 **Example:**
 ```python
@@ -308,6 +328,120 @@ commands = [
     {"description": "Check interfaces", "command": "ip link show"},
     {"description": "Check routing", "command": "ip route show"}
 ]
+```
+
+---
+
+### Batch Script Management Tools
+
+#### `list_batch_scripts`
+Browse saved batch scripts from database
+
+**Parameters:**
+- `limit` (optional): Max results (default: 50, max: 200)
+- `offset` (optional): Pagination offset (default: 0)
+- `sort_by` (optional): most_used, recently_used, newest, oldest (default: recently_used)
+- `search` (optional): Search in name/description
+
+**Returns:** List of scripts with:
+- ID, name, description
+- Usage statistics (times_used, last_used_at)
+- Creation date
+- Content size
+
+**Examples:**
+```
+Show me all saved batch scripts
+List my most frequently used scripts
+Search for scripts containing 'docker'
+```
+
+---
+
+#### `get_batch_script`
+View batch script details and content by ID
+
+**Parameters:**
+- `script_id` (required): Script ID from list_batch_scripts
+
+**Returns:**
+- Complete script details
+- Full script content
+- Usage statistics
+- Content hash
+
+**Example:**
+```
+Show me script 5
+What's in the network inspection script?
+```
+
+---
+
+#### `save_batch_script`
+Save batch script to database for reuse (optional: load existing for editing)
+
+**Parameters:**
+- `script_id` (optional): Load existing script for editing
+- `content` (required): Complete bash script content
+- `description` (required): What this script does
+
+**Returns:** 
+- Script ID (new or reused via deduplication)
+- Confirmation message
+- Deduplication notice if script already exists
+
+**Features:**
+- Automatic deduplication via SHA256 content hash
+- Edit mode: Specify script_id to load existing script for modification
+- Tracks usage statistics
+
+**Examples:**
+```
+Save this network inspection script
+Load script 5 for editing and save with changes
+```
+
+---
+
+#### `execute_batch_script_by_id`
+Execute a saved batch script by ID
+
+**Parameters:**
+- `script_id` (required): Script ID from list_batch_scripts
+- `timeout` (optional): Max execution time (default: 300 seconds)
+- `output_mode` (optional): summary or full (default: summary)
+- `conversation_id` (optional): Link to conversation
+
+**Returns:** Same as execute_script_content
+
+**Examples:**
+```
+Execute script 5
+Run the docker diagnostics script
+```
+
+---
+
+#### `delete_batch_script`
+Delete batch script from database (requires confirmation)
+
+**Parameters:**
+- `script_id` (required): Script ID to delete
+- `confirm` (optional): Confirmation flag (default: false)
+
+**Returns:**
+- First call: Shows script details and warning
+- Second call (with confirm=true): Deletes and confirms
+
+**Process:**
+1. First call shows what will be deleted
+2. Second call with confirm=true actually deletes
+
+**Examples:**
+```
+Delete script 3
+Confirm deletion of script 5
 ```
 
 ---
@@ -710,6 +844,66 @@ Execute recipe 5 and track in a conversation
 
 ---
 
+## Batch Script Management Features
+
+### Key Features
+
+**Automatic Deduplication:**
+- Scripts are deduplicated via SHA256 content hash
+- Same script content = same database entry
+- Usage statistics tracked per unique script
+
+**Usage Statistics:**
+- `times_used`: How many times script has been executed
+- `last_used_at`: Timestamp of most recent execution
+- Helps identify popular/useful scripts
+
+**Edit Mode:**
+- Load existing script by ID in save_batch_script
+- Modify and save (creates new version if content changed)
+- Preserves script library organization
+
+**Database Integration:**
+- All scripts stored in `batch_scripts` table
+- Execution history in `batch_executions` table
+- Full command tracking in `commands` table
+
+### Typical Workflow
+
+1. **Create and execute:**
+   ```
+   Run docker diagnostics
+   [Script executes, auto-saved to database]
+   ```
+
+2. **Browse library:**
+   ```
+   List my batch scripts
+   [Shows all saved scripts with stats]
+   ```
+
+3. **Reuse script:**
+   ```
+   Execute script 5
+   [Loads from database, runs, increments usage counter]
+   ```
+
+4. **Edit script:**
+   ```
+   Load script 5 for editing
+   [Modifies content in UI]
+   Save updated script
+   [New version saved if content changed]
+   ```
+
+5. **Clean up:**
+   ```
+   Delete old script 3
+   [Two-step confirmation, permanent delete]
+   ```
+
+---
+
 ## Usage Patterns
 
 ### Typical Workflow Examples
@@ -796,6 +990,14 @@ recipes (id, name, description, prerequisites, success_criteria,
 
 -- Recipe command sequences
 recipe_commands (id, recipe_id, sequence_num, command_text)
+
+-- Batch script library
+batch_scripts (id, name, description, script_content, content_hash,
+               created_by, created_at, times_used, last_used_at)
+
+-- Batch execution tracking
+batch_executions (id, machine_id, script_name, status, created_by,
+                  started_at, completed_at, duration_seconds)
 ```
 
 ---
@@ -831,5 +1033,5 @@ server:
 
 ---
 
-**Version:** 3.0  
-**Last Updated:** December 2024
+**Version:** 3.1  
+**Last Updated:** December 16, 2024

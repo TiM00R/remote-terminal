@@ -1,0 +1,36 @@
+/* Bash script syntax highlighting */
+#content {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background-color: #0c0c0c;
+    color: #cccccc;
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    line-height: 1.5;
+    tab-size: 4;
+}
+
+#content::placeholder {
+    color: #666;
+}
+
+
+/* Bash editor syntax highlighting */
+.bash-editor {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 12px;
+    border: 2px solid #3e3e3e;
+    border-radius: 4px;
+    line-height: 1.5;
+    tab-size: 4;
+    overflow: auto;
+    white-space: pre;
+    word-wrap: normal;
+}
+
+.bash-editor:focus {
+    outline: none;
+    border-color: #007acc;
+}

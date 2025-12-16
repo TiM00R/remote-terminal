@@ -14,9 +14,10 @@ Imagine telling Claude:
 "Install nginx on my server and configure it with SSL"
 "Run complete system diagnostics and tell me if anything looks wrong"
 "Find all log errors from the last hour and summarize them"
+"Save this batch script and run it again next week"
 ```
 
-And Claude does it - executing commands, analyzing output, and taking action on your behalf.
+And Claude does it - executing commands, analyzing output, saving useful scripts, and taking action on your behalf.
 
 **That's Remote Terminal.**
 
@@ -30,11 +31,31 @@ And Claude does it - executing commands, analyzing output, and taking action on 
 - **🌐 Multi-Server Management** - Switch between multiple servers easily
 - **📁 File Transfer (SFTP)** - Upload/download files and directories with compression
 - **📜 Batch Script Execution** - Run multi-command scripts 10-50x faster
+- **📚 Batch Script Library** - Save, browse, and reuse batch scripts (NEW in 3.1)
 - **💬 Conversation Tracking** - Group commands by goal with rollback support
-- **📚 Recipe System** - Save successful workflows for reuse
+- **🎯 Recipe System** - Save successful workflows for reuse
 - **🗄️ Database Integration** - Full audit trail with SQLite
 - **🌍 Interactive Web Terminal** - Full-featured terminal in browser (type, paste, scroll history)
 - **🔄 Multi-Terminal Sync** - Open multiple terminals, all perfectly synchronized
+- **✨ Bash Syntax Highlighting** - VS Code-style colors in standalone UI (NEW in 3.1)
+
+### NEW in Version 3.1: Batch Script Management
+
+**Save and reuse your batch scripts!**
+
+- **Automatic deduplication** - Same script content = same database entry
+- **Usage statistics** - Track times_used and last_used_at
+- **Edit mode** - Load existing script, modify, and save
+- **Browse library** - List scripts with search and sorting
+- **Two-step deletion** - Confirmation required to prevent accidents
+
+**Example workflow:**
+```
+1. "Run docker diagnostics" → Script executes and auto-saves
+2. "List my batch scripts" → Browse saved scripts with stats
+3. "Execute script 5" → Reuse saved script instantly
+4. "Load script 5 for editing" → Modify in UI and save changes
+```
 
 ### The Interactive Web Terminal
 
@@ -173,8 +194,10 @@ Complete guides for every use case:
 - **[QUICK_START.md](docs/QUICK_START.md)** - Get running in 5 minutes
 - **[INSTALLATION.md](docs/INSTALLATION.md)** - Detailed setup instructions
 - **[USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete feature walkthrough
+- **[FEATURE_REFERENCE.md](docs/FEATURE_REFERENCE.md)** - All MCP tools reference
 - **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common problems and solutions
 - **[WEBSOCKET_BROADCAST.md](docs/WEBSOCKET_BROADCAST.md)** - Multi-terminal synchronization details
+- **[RELEASE_NOTES_v3.1.md](docs/RELEASE_NOTES_v3.1.md)** - Release notes for version 3.1
 
 ---
 
@@ -215,12 +238,15 @@ Complete guides for every use case:
 "Find all files larger than 100MB"
 ```
 
-### Automation
+### Automation & Script Management
 
 ```
 "Create a recipe from our successful nginx installation"
 "Execute the network diagnostics recipe"
 "Start a conversation to configure WiFi"
+"List my saved batch scripts"
+"Execute script 5"
+"Load script 3 for editing"
 ```
 
 ---
@@ -267,30 +293,43 @@ Service: nginx.service is active
 ```
 remote_terminal/
 ├── data/                      # SQLite database
-│   └── remote_terminal.db     # Command history, conversations, recipes
+│   └── remote_terminal.db     # Command history, conversations, recipes, scripts
 ├── docs/                      # Documentation
 │   ├── QUICK_START.md
 │   ├── INSTALLATION.md
 │   ├── USER_GUIDE.md
+│   ├── FEATURE_REFERENCE.md
 │   ├── TROUBLESHOOTING.md
-│   └── WEBSOCKET_BROADCAST.md
+│   ├── WEBSOCKET_BROADCAST.md
+│   └── RELEASE_NOTES_v3.1.md
 ├── recipes/                   # Example automation recipes
 ├── src/                       # Source code
 │   ├── tools/                 # MCP tool modules
 │   │   ├── tools_hosts.py     # Server management
 │   │   ├── tools_commands.py  # Command execution
 │   │   ├── tools_sftp.py      # File transfer
-│   │   ├── tools_batch.py     # Batch execution
+│   │   ├── tools_batch.py     # Batch execution & script management
 │   │   ├── tools_conversations.py
 │   │   └── tools_recipes.py
 │   ├── mcp_server.py          # MCP server entry point
 │   ├── ssh_manager.py         # SSH connection handling
 │   ├── command_state.py       # Command tracking
 │   ├── database_manager.py    # SQLite integration
+│   ├── database_batch.py      # Batch script database
 │   ├── output_filter.py       # Smart filtering
 │   ├── prompt_detector.py     # Command completion detection
 │   └── web_terminal.py        # WebSocket-enabled web interface
 ├── standalone/                # Standalone web UI
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── control-styles.css  # Bash syntax highlighting
+│   │   ├── js/
+│   │   │   ├── control-main.js     # Script loading
+│   │   │   └── control-forms.js    # Script selectors & highlighting
+│   │   └── tool-schemas/
+│   │       └── batch.json          # Batch tool definitions
+│   ├── mcp_control.html
+│   └── standalone_mcp.py
 ├── config.yaml                # Global settings
 ├── hosts.yaml                 # Server configurations
 └── requirements.txt           # Python dependencies
@@ -302,7 +341,7 @@ remote_terminal/
 - **MCP Protocol** - Claude integration
 - **Paramiko** - SSH/SFTP library
 - **NiceGUI + WebSockets** - Web terminal with multi-terminal sync
-- **SQLite** - Database for history/recipes
+- **SQLite** - Database for history/recipes/scripts
 - **FastAPI** - Web framework
 
 ---
@@ -396,6 +435,25 @@ Batch execution vs sequential:
 
 ## 🔍 Advanced Features
 
+### Batch Script Library (NEW in 3.1)
+
+Save batch scripts for reuse:
+
+```
+1. Run diagnostics → Script auto-saved with deduplication
+2. Browse library → "List my batch scripts"
+3. Execute saved script → "Execute script 5"
+4. Edit existing → "Load script 3 for editing"
+5. Track usage → times_used, last_used_at
+```
+
+Features:
+- **Automatic deduplication** via SHA256 hash
+- **Usage statistics** tracking
+- **Edit mode** for modifications
+- **Search and sort** capabilities
+- **Two-step deletion** with confirmation
+
 ### Conversation Tracking
 
 Group related commands by goal:
@@ -467,13 +525,28 @@ This is Tim's personal project. If you'd like to contribute:
 1. Test thoroughly on your setup
 2. Document any issues found
 3. Suggest improvements
-4. Share recipes you create
+4. Share recipes and scripts you create
 
 ---
 
 ## 📜 Version History
 
-### Version 3.0 (Current - December 2024)
+### Version 3.1 (Current - December 16, 2024)
+
+**NEW - Batch Script Management:**
+- ✅ 5 new MCP tools for batch script library management
+- ✅ Automatic deduplication via SHA256 content hash
+- ✅ Usage statistics tracking (times_used, last_used_at)
+- ✅ Edit mode for modifying saved scripts
+- ✅ Two-step deletion with confirmation
+- ✅ Standalone UI with bash syntax highlighting (VS Code colors)
+- ✅ Script dropdown selectors with auto-population
+
+**Tool Renaming (for clarity):**
+- ✅ `create_diagnostic_script` → `build_script_from_commands`
+- ✅ `execute_batch_script` → `execute_script_content`
+
+### Version 3.0 (December 2024)
 
 - ✅ Converted from PostgreSQL to SQLite
 - ✅ Eliminated Docker dependency
@@ -509,8 +582,10 @@ For issues or questions:
 1. **Check Documentation**
    - QUICK_START.md for setup
    - USER_GUIDE.md for features
+   - FEATURE_REFERENCE.md for tool details
    - TROUBLESHOOTING.md for problems
    - WEBSOCKET_BROADCAST.md for multi-terminal details
+   - RELEASE_NOTES_v3.1.md for latest changes
 
 2. **Review Logs**
    - Claude Desktop logs (Help → Show Logs)
@@ -542,6 +617,6 @@ This project is for personal use by Tim. Not currently open source.
 
 ---
 
-**Version:** 3.0 (SQLite-based, multi-server support, WebSocket multi-terminal sync)  
-**Last Updated:** December 2024  
+**Version:** 3.1 (Batch script library, syntax highlighting, enhanced standalone UI)  
+**Last Updated:** December 16, 2024  
 **Maintainer:** Tim

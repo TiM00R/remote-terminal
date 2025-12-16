@@ -12,6 +12,7 @@ let currentCategory = 'commands';
 let currentTool = null;
 let allToolSchemas = {};
 let cachedRecipes = null; // Cache for recipes list
+let cachedConversations = null; // Cache for conversations list
 
 // Initialize on page load
 async function init() {
@@ -113,10 +114,11 @@ async function loadCategory(category) {
     // Reset current tool
     currentTool = null;
     
-    // If switching to workflows, clear recipe cache to force fresh load
+    // If switching to workflows, clear caches to force fresh load
     if (category === 'workflows') {
         cachedRecipes = null;
-        console.log('Switched to workflows - recipe cache cleared');
+        cachedConversations = null;
+        console.log('Switched to workflows - caches cleared');
     }
 }
 
@@ -171,6 +173,144 @@ function getCachedRecipes() {
     return cachedRecipes || [];
 }
 
+// Load conversations for workflows tab
+async function loadConversations() {
+    if (cachedConversations !== null) {
+        console.log('Using cached conversations:', cachedConversations.length);
+        return cachedConversations;
+    }
+    
+    console.log('Loading conversations from server...');
+    try {
+        const response = await fetch('http://localhost:8081/execute_mcp_tool', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tool: 'list_conversations',
+                arguments: { limit: 200 }
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Conversations API Response:', data);
+        
+        if (data.conversations && Array.isArray(data.conversations)) {
+            cachedConversations = data.conversations;
+            console.log('Loaded conversations:', cachedConversations.length, 'conversations');
+            return cachedConversations;
+        } else if (data.error) {
+            console.error('API returned error:', data.error);
+            cachedConversations = [];
+            return [];
+        } else {
+            console.error('Unexpected API response format:', data);
+            cachedConversations = [];
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+        cachedConversations = [];
+        return [];
+    }
+}
+
+// Get cached conversations (for use in forms)
+function getCachedConversations() {
+    console.log('getCachedConversations called, cachedConversations:', cachedConversations);
+    return cachedConversations || [];
+}
+
+// Load session commands for command_select fields
+async function loadSessionCommands() {
+    console.log('Loading session commands...');
+    try {
+        const response = await fetch('http://localhost:8081/execute_mcp_tool', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tool: 'list_session_commands',
+                arguments: {}
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Session Commands API Response:', data);
+        
+        if (data.commands && Array.isArray(data.commands)) {
+            console.log('Loaded session commands:', data.commands.length, 'commands');
+            return data.commands;
+        } else if (data.error) {
+            console.error('API returned error:', data.error);
+            return [];
+        } else {
+            console.error('Unexpected API response format:', data);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading session commands:', error);
+        return [];
+    }
+}
+
+// Get session commands (non-cached, always fresh)
+async function getSessionCommands() {
+    return await loadSessionCommands();
+}
+
+
+
+// Load batch scripts for script_select fields
+async function loadBatchScripts() {
+    console.log('Loading batch scripts...');
+    try {
+        const response = await fetch('http://localhost:8081/execute_mcp_tool', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tool: 'list_batch_scripts',
+                arguments: { limit: 200 }
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Batch Scripts API Response:', data);
+        
+        const scripts = [];
+        
+        // Extract text from wrapped response
+        const text = data.result || data;
+        
+        if (typeof text === 'string') {
+            const lines = text.split('\n');
+            let currentScript = null;
+            
+            for (const line of lines) {
+                if (line.startsWith('ID: ')) {
+                    if (currentScript) scripts.push(currentScript);
+                    currentScript = { id: parseInt(line.substring(4)) };
+                } else if (currentScript && line.trim().startsWith('Description: ')) {
+                    currentScript.description = line.trim().substring(13);
+                }
+            }
+            if (currentScript) scripts.push(currentScript);
+            
+            console.log('Parsed batch scripts:', scripts.length, 'scripts');
+        }
+        // ADD THIS LINE: Sort numerically by ID
+        scripts.sort((a, b) => a.id - b.id);
+        return scripts;
+    } catch (error) {
+        console.error('Error loading batch scripts:', error);
+        return [];
+    }
+}
+
+
+async function getBatchScripts() {
+    return await loadBatchScripts();
+}
+
+
 // Handle tool selection
 async function handleToolSelection() {
     const toolName = document.getElementById('toolSelect').value;
@@ -196,12 +336,34 @@ async function handleToolSelection() {
     // Update description
     document.getElementById('toolDescription').textContent = tool.description;
     
-    // If in workflows category AND tool uses recipe_select, load them first
+    // If in workflows category AND tool uses recipe_select or conversation_select, load them first
     const needsRecipes = tool.arguments && tool.arguments.some(arg => arg.type === 'recipe_select');
+    const needsConversations = tool.arguments && tool.arguments.some(arg => arg.type === 'conversation_select');
+    const needsCommands = tool.arguments && tool.arguments.some(arg => arg.type === 'command_select');
+    
     if (currentCategory === 'workflows' && needsRecipes) {
         console.log('Tool needs recipes, loading...');
         await loadRecipes();
         console.log('Recipes loaded, generating form');
+    }
+    
+    if (currentCategory === 'workflows' && needsConversations) {
+        console.log('Tool needs conversations, loading...');
+        await loadConversations();
+        console.log('Conversations loaded, generating form');
+    }
+    
+    // Commands tab - load session commands if needed
+    if (currentCategory === 'commands' && needsCommands) {
+        console.log('Tool needs session commands, loading...');
+        // Will be loaded fresh in createCommandSelectField
+    }
+    
+    // Batch Scripts tab - load scripts if needed
+    const needsScripts = tool.arguments && tool.arguments.some(arg => arg.type === 'script_select');
+    if (currentCategory === 'batch' && needsScripts) {
+        console.log('Tool needs batch scripts, loading...');
+        // Will be loaded fresh in createScriptSelectField
     }
 
     // Generate form
@@ -313,5 +475,8 @@ window.controlMain = {
     init,
     handleToolSelection,
     switchServer,
-    getCachedRecipes
+    getCachedRecipes,
+    getCachedConversations,
+    getSessionCommands,
+    getBatchScripts
 };

@@ -89,3 +89,5 @@ venv.bak/
 
 # Demo videos - only ignore compressed version (original demo.mp4 is tracked)
 docs/demo-compressed.mp4
+data/
+data/*.db

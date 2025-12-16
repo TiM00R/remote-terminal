@@ -2,7 +2,142 @@
   "category": "Batch Scripts",
   "tools": [
     {
-      "name": "execute_batch_script",
+      "name": "list_batch_scripts",
+      "description": "Browse saved batch scripts from database",
+      "arguments": [
+        {
+          "name": "limit",
+          "type": "number",
+          "required": false,
+          "default": 50,
+          "label": "Limit",
+          "min": 1,
+          "max": 200,
+          "placeholder": "50"
+        },
+        {
+          "name": "offset",
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "label": "Offset",
+          "min": 0,
+          "placeholder": "0"
+        },
+        {
+          "name": "sort_by",
+          "type": "select",
+          "required": false,
+          "default": "recently_used",
+          "label": "Sort By",
+          "options": ["most_used", "recently_used", "newest", "oldest"]
+        },
+        {
+          "name": "search",
+          "type": "text",
+          "required": false,
+          "label": "Search",
+          "placeholder": "Search in name/description (optional)"
+        }
+      ]
+    },
+    {
+      "name": "get_batch_script",
+      "description": "View batch script details and content by ID",
+      "arguments": [
+        {
+          "name": "script_id",
+          "type": "script_select",
+          "required": true,
+          "label": "Script ID"
+        }
+      ]
+    },
+    {
+      "name": "save_batch_script",
+      "description": "Save batch script to database (without executing). Optionally load existing script for editing.",
+      "arguments": [
+        {
+          "name": "script_id",
+          "type": "script_select",
+          "required": false,
+          "label": "Load Existing Script (optional)",
+          "placeholder": "Select to edit existing script"
+        },
+        {
+          "name": "content",
+          "type": "textarea",
+          "required": true,
+          "label": "Script Content",
+          "placeholder": "#!/bin/bash\necho \"Step 1\"\nls -la",
+          "rows": 15
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "label": "Description",
+          "placeholder": "What this script does"
+        }
+      ]
+    },
+    {
+      "name": "execute_script_content_by_id",
+      "description": "Execute a saved batch script by ID",
+      "arguments": [
+        {
+          "name": "script_id",
+          "type": "script_select",
+          "required": true,
+          "label": "Script ID"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "default": 300,
+          "label": "Timeout (seconds)",
+          "min": 10,
+          "max": 3600
+        },
+        {
+          "name": "output_mode",
+          "type": "select",
+          "required": false,
+          "default": "summary",
+          "label": "Output Mode",
+          "options": ["summary", "full"]
+        },
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": false,
+          "label": "Conversation ID",
+          "placeholder": "Optional conversation link"
+        }
+      ]
+    },
+    {
+      "name": "delete_batch_script",
+      "description": "Delete batch script from database (requires confirmation)",
+      "arguments": [
+        {
+          "name": "script_id",
+          "type": "script_select",
+          "required": true,
+          "label": "Script ID"
+        },
+        {
+          "name": "confirm",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "label": "Confirm deletion (check to proceed)"
+        }
+      ]
+    },
+    {
+      "name": "execute_script_content",
       "description": "Run multi-command batch script with step tracking",
       "arguments": [
         {
@@ -36,12 +171,19 @@
           "default": "summary",
           "label": "Output Mode",
           "options": ["summary", "full"]
+        },
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": false,
+          "label": "Conversation ID",
+          "placeholder": "Optional conversation link"
         }
       ]
     },
     {
-      "name": "create_diagnostic_script",
-      "description": "Helper to build diagnostic script from command list",
+      "name": "build_script_from_commands",
+      "description": "Helper to build batch (shell) script from command list",
       "arguments": [
         {
           "name": "commands",

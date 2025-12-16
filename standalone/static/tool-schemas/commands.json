@@ -43,7 +43,7 @@
       "arguments": [
         {
           "name": "command_id",
-          "type": "text",
+          "type": "command_select",
           "required": true,
           "label": "Command ID",
           "placeholder": "cmd_123456"
@@ -64,7 +64,7 @@
       "arguments": [
         {
           "name": "command_id",
-          "type": "text",
+          "type": "command_select",
           "required": true,
           "label": "Command ID",
           "placeholder": "cmd_123456"
@@ -84,7 +84,7 @@
       "arguments": [
         {
           "name": "command_id",
-          "type": "text",
+          "type": "command_select",
           "required": true,
           "label": "Command ID",
           "placeholder": "cmd_123456"
@@ -92,8 +92,8 @@
       ]
     },
     {
-      "name": "list_commands",
-      "description": "List all tracked commands with status",
+      "name": "list_session_commands",
+      "description": "List tracked commands from current session (in-memory, max 50)",
       "arguments": [
         {
           "name": "status_filter",
@@ -101,6 +101,78 @@
           "required": false,
           "label": "Status Filter",
           "options": ["all", "running", "completed", "killed"]
+        }
+      ]
+    },
+    {
+      "name": "list_command_history",
+      "description": "List command execution history from database with filters",
+      "arguments": [
+        {
+          "name": "machine_id",
+          "type": "text",
+          "required": false,
+          "label": "Server Machine ID (optional)",
+          "placeholder": "Leave empty for current server"
+        },
+        {
+          "name": "conversation_id",
+          "type": "number",
+          "required": false,
+          "label": "Conversation ID (optional)"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "label": "Status Filter (optional)",
+          "options": ["all", "executed", "cancelled", "timeout", "undone"]
+        },
+        {
+          "name": "has_errors",
+          "type": "select",
+          "required": false,
+          "label": "Error Filter (optional)",
+          "options": ["all", "true", "false"]
+        },
+        {
+          "name": "after_date",
+          "type": "text",
+          "required": false,
+          "label": "After Date (YYYY-MM-DD)",
+          "placeholder": "2024-12-01"
+        },
+        {
+          "name": "before_date",
+          "type": "text",
+          "required": false,
+          "label": "Before Date (YYYY-MM-DD)",
+          "placeholder": "2024-12-02"
+        },
+        {
+          "name": "limit",
+          "type": "number",
+          "required": false,
+          "default": 50,
+          "label": "Limit",
+          "min": 1,
+          "max": 500
+        },
+        {
+          "name": "offset",
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "label": "Offset (for pagination)",
+          "min": 0
+        },
+        {
+          "name": "order",
+          "type": "select",
+          "required": false,
+          "default": "newest_first",
+          "label": "Sort Order",
+          "options": ["newest_first", "oldest_first"]
         }
       ]
     },

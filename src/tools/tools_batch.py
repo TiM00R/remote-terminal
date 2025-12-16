@@ -1,15 +1,16 @@
 """
 Batch Script Execution Tools
 Tools for executing multi-command batch scripts on remote servers
-Phase 4: Database integration for batch execution tracking
+Phase 5: Added batch script management tools (list, get, save, execute_by_id, delete)
 """
 
 import logging
 import json
+import hashlib
 from datetime import datetime
 
 from mcp import types
-from batch_executor import execute_batch_script, create_diagnostic_script
+from batch_executor import execute_script_content, build_script_from_commands
 from database_batch import BatchDatabaseOperations
 from .tools_commands import requires_connection
 
@@ -19,16 +20,149 @@ logger = logging.getLogger(__name__)
 async def get_tools(**kwargs) -> list[types.Tool]:
     """Get list of batch execution tools"""
     return [
+        # NEW: Batch script management tools
         types.Tool(
-            name="execute_batch_script",
+            name="list_batch_scripts",
+            description="""List batch scripts saved in database.
+
+Browse saved scripts with filtering and sorting options.
+Use this to find scripts to reuse or manage.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results to return (default: 50, max: 200)",
+                        "default": 50
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Offset for pagination (default: 0)",
+                        "default": 0
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "description": "Sort order",
+                        "enum": ["most_used", "recently_used", "newest", "oldest"],
+                        "default": "recently_used"
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Search in name/description (optional)"
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="get_batch_script",
+            description="""Get batch script details and content by ID.
+
+Returns complete script information including source code.
+Use this to view a script before executing or editing it.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "script_id": {
+                        "type": "integer",
+                        "description": "Script ID from list_batch_scripts"
+                    }
+                },
+                "required": ["script_id"]
+            }
+        ),
+        types.Tool(
+            name="save_batch_script",
+            description="""Save a batch script to database (without executing).
+
+Saves script for later reuse. Automatically deduplicates based on content hash.
+Does NOT execute the script - use execute_script_content_by_id to run it.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "Complete bash script content"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "What this script does"
+                    }
+                },
+                "required": ["content", "description"]
+            }
+        ),
+        types.Tool(
+            name="execute_script_content_by_id",
+            description="""Execute a saved batch script by ID.
+
+Loads script from database and executes it on the remote server.
+Increments usage counter and tracks execution in batch_executions table.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "script_id": {
+                        "type": "integer",
+                        "description": "Script ID from list_batch_scripts"
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Max execution time in seconds (default: 300)",
+                        "default": 300
+                    },
+                    "output_mode": {
+                        "type": "string",
+                        "description": "Output format: summary or full",
+                        "enum": ["summary", "full"],
+                        "default": "summary"
+                    },
+                    "conversation_id": {
+                        "type": "integer",
+                        "description": "Optional: Link to conversation for tracking"
+                    }
+                },
+                "required": ["script_id"]
+            }
+        ),
+        types.Tool(
+            name="delete_batch_script",
+            description="""Delete a batch script from database (requires confirmation).
+
+First call without confirm shows script details and warning.
+Second call with confirm=true actually deletes.
+This is a hard delete - execution history is preserved but script content is lost.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "script_id": {
+                        "type": "integer",
+                        "description": "Script ID to delete"
+                    },
+                    "confirm": {
+                        "type": "boolean",
+                        "description": "Confirm deletion (set to true to proceed)",
+                        "default": False
+                    }
+                },
+                "required": ["script_id"]
+            }
+        ),
+        
+        # EXISTING: Batch execution tools
+        types.Tool(
+            name="execute_script_content",
             description="""Execute multi-command batch script on remote Linux server.
 
 OUTPUT_MODE_GUIDANCE: Use output_mode='full' for diagnostic commands with expected concise output. Full output returns directly in the response for immediate analysis.
 
 LOG_FILE_LOCATION: Script output is automatically saved to the local user's home directory:
-- %USERPROFILE%\mcp_batch_logs\batch_output_[timestamp].log
+- %USERPROFILE%\\mcp_batch_logs\\batch_output_[timestamp].log
 
-Use Aspen tools (apsen-tool_v2:read_file) with project root ~\mcp_batch_logs to access saved log files for post-execution analysis—for example, extracting specific error context, parsing structured data, debugging by reading lines around errors, or processing log entries for analysis. Do not use bash/Linux tools to access local log files; use Aspen tools for local file system access.
+Use Aspen tools (apsen-tool_v2:read_file) with project root ~\\mcp_batch_logs to access saved log files for post-execution analysis—for example, extracting specific error context, parsing structured data, debugging by reading lines around errors, or processing log entries for analysis. Do not use bash/Linux tools to access local log files; use Aspen tools for local file system access.
 
 Workflow:
 1. Pre-authenticate sudo if script contains sudo commands
@@ -93,8 +227,8 @@ echo "[ALL_DIAGNOSTICS_COMPLETE]"
             }
         ),
         types.Tool(
-            name="create_diagnostic_script",
-            description="""Helper tool to create a diagnostic batch script from command list.
+            name="build_script_from_commands",
+            description="""Helper tool to create a batch (shell) script from command list.
 
 Useful for AI to quickly build properly formatted scripts.
 
@@ -136,8 +270,53 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
                       database=None, hosts_manager=None, **kwargs) -> list[types.TextContent]:
     """Handle batch execution tool calls - with database integration"""
     
-    if name == "execute_batch_script":
-        return await _execute_batch_script(
+    # NEW: Batch management tools
+    if name == "list_batch_scripts":
+        return await _list_batch_scripts(
+            limit=arguments.get("limit", 50),
+            offset=arguments.get("offset", 0),
+            sort_by=arguments.get("sort_by", "recently_used"),
+            search=arguments.get("search"),
+            database=database
+        )
+    
+    elif name == "get_batch_script":
+        return await _get_batch_script(
+            script_id=arguments.get("script_id"),
+            database=database
+        )
+    
+    elif name == "save_batch_script":
+        return await _save_batch_script(
+            content=arguments.get("content"),
+            description=arguments.get("description"),
+            database=database,
+            shared_state=shared_state
+        )
+    
+    elif name == "execute_script_content_by_id":
+        return await _execute_script_content_by_id(
+            script_id=arguments.get("script_id"),
+            timeout=arguments.get("timeout", 300),
+            output_mode=arguments.get("output_mode", "summary"),
+            conversation_id=arguments.get("conversation_id"),
+            shared_state=shared_state,
+            config=config,
+            web_server=web_server,
+            database=database,
+            hosts_manager=hosts_manager
+        )
+    
+    elif name == "delete_batch_script":
+        return await _delete_batch_script(
+            script_id=arguments.get("script_id"),
+            confirm=arguments.get("confirm", False),
+            database=database
+        )
+    
+    # EXISTING: Batch execution tools
+    elif name == "execute_script_content":
+        return await _execute_script_content(
             script_content=arguments.get("script_content"),
             description=arguments.get("description"),
             timeout=arguments.get("timeout", 300),
@@ -150,8 +329,8 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
             conversation_id=arguments.get("conversation_id")
         )
     
-    elif name == "create_diagnostic_script":
-        return await _create_diagnostic_script(
+    elif name == "build_script_from_commands":
+        return await _build_script_from_commands(
             arguments.get("commands"),
             arguments.get("description", "Diagnostics")
         )
@@ -159,8 +338,384 @@ async def handle_call(name: str, arguments: dict, shared_state, config, web_serv
     # Not our tool, return None
     return None
 
+
+# ============================================================================
+# NEW: Batch Script Management Tool Implementations
+# ============================================================================
+
+async def _list_batch_scripts(
+    limit: int,
+    offset: int,
+    sort_by: str,
+    search: str,
+    database=None
+) -> list[types.TextContent]:
+    """List batch scripts from database"""
+    
+    if not database or not database.is_connected():
+        return [types.TextContent(
+            type="text",
+            text="Error: Database not connected"
+        )]
+    
+    try:
+        # Validate limit
+        if limit < 1 or limit > 200:
+            limit = 50
+        
+        cursor = database.conn.cursor()
+        
+        # Build query based on sort_by
+        order_clause = {
+            "most_used": "times_used DESC, last_used_at DESC",
+            "recently_used": "last_used_at DESC",
+            "newest": "created_at DESC",
+            "oldest": "created_at ASC"
+        }.get(sort_by, "last_used_at DESC")
+        
+        # Build WHERE clause for search
+        where_clause = ""
+        params = []
+        if search:
+            where_clause = "WHERE (name LIKE ? OR description LIKE ?)"
+            params = [f"%{search}%", f"%{search}%"]
+        
+        # Get total count
+        count_query = f"SELECT COUNT(*) FROM batch_scripts {where_clause}"
+        cursor.execute(count_query, params)
+        total_count = cursor.fetchone()[0]
+        
+        # Get scripts
+        query = f"""
+            SELECT 
+                id, name, description, 
+                times_used, last_used_at, created_at,
+                LENGTH(script_content) as content_length
+            FROM batch_scripts
+            {where_clause}
+            ORDER BY {order_clause}
+            LIMIT ? OFFSET ?
+        """
+        
+        cursor.execute(query, params + [limit, offset])
+        scripts = cursor.fetchall()
+        
+        if not scripts:
+            return [types.TextContent(
+                type="text",
+                text=f"No batch scripts found{' matching search criteria' if search else ''}."
+            )]
+        
+        # Format response
+        lines = [
+            f"Found {total_count} batch script(s) (showing {len(scripts)})",
+            ""
+        ]
+        
+        for script in scripts:
+            script_id, name, desc, times_used, last_used, created, content_len = script
+            lines.extend([
+                f"ID: {script_id}",
+                f"  Name: {name}",
+                f"  Description: {desc or 'N/A'}",
+                f"  Used: {times_used} time(s), Last: {last_used or 'Never'}",
+                f"  Created: {created}",
+                f"  Size: {content_len} bytes",
+                ""
+            ])
+        
+        if total_count > offset + len(scripts):
+            lines.append(f"... {total_count - offset - len(scripts)} more scripts available (use offset={offset + limit})")
+        
+        return [types.TextContent(
+            type="text",
+            text="\n".join(lines)
+        )]
+        
+    except Exception as e:
+        logger.error(f"Error listing scripts: {e}")
+        return [types.TextContent(
+            type="text",
+            text=f"Error listing scripts: {str(e)}"
+        )]
+
+
+async def _get_batch_script(
+    script_id: int,
+    database=None
+) -> list[types.TextContent]:
+    """Get batch script details and content"""
+    
+    if not database or not database.is_connected():
+        return [types.TextContent(
+            type="text",
+            text="Error: Database not connected"
+        )]
+    
+    try:
+        cursor = database.conn.cursor()
+        cursor.execute("""
+            SELECT 
+                id, name, description, script_content,
+                content_hash, times_used, last_used_at, created_at
+            FROM batch_scripts 
+            WHERE id = ?
+        """, (script_id,))
+        
+        script = cursor.fetchone()
+        
+        if not script:
+            return [types.TextContent(
+                type="text",
+                text=f"Error: Script with ID {script_id} not found"
+            )]
+        
+        script_id, name, desc, content, hash_val, times_used, last_used, created = script
+        
+        # Format response
+        response = [
+            f"Batch Script ID: {script_id}",
+            f"Name: {name}",
+            f"Description: {desc or 'N/A'}",
+            f"Times Used: {times_used}",
+            f"Last Used: {last_used or 'Never'}",
+            f"Created: {created}",
+            f"Content Hash: {hash_val[:16]}...",
+            "",
+            "Script Content:",
+            "```bash",
+            content,
+            "```"
+        ]
+        
+        return [types.TextContent(
+            type="text",
+            text="\n".join(response)
+        )]
+        
+    except Exception as e:
+        logger.error(f"Error getting script: {e}")
+        return [types.TextContent(
+            type="text",
+            text=f"Error getting script: {str(e)}"
+        )]
+
+
+async def _save_batch_script(
+    content: str,
+    description: str,
+    database=None,
+    shared_state=None
+) -> list[types.TextContent]:
+    """Save batch script to database (without executing)"""
+    
+    if not database or not database.is_connected():
+        return [types.TextContent(
+            type="text",
+            text="Error: Database not connected"
+        )]
+    
+    try:
+        # Calculate content hash for deduplication
+        content_hash = hashlib.sha256(content.encode()).hexdigest()
+        
+        cursor = database.conn.cursor()
+        
+        # Check if this exact script already exists
+        cursor.execute("""
+            SELECT id, name, times_used FROM batch_scripts 
+            WHERE content_hash = ?
+        """, (content_hash,))
+        
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Script already exists - just return info
+            return [types.TextContent(
+                type="text",
+                text=f"ℹ️ This exact script already exists in database:\n\nScript ID: {existing[0]}\nName: {existing[1]}\nTimes Used: {existing[2]}\n\nNo new script created (deduplication)."
+            )]
+        
+        # Create new script
+        script_name = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sh"
+        
+        cursor.execute("""
+            INSERT INTO batch_scripts (
+                name, script_content, description, content_hash,
+                created_by, created_at, times_used
+            ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0)
+        """, (script_name, content, description, content_hash, "claude"))
+        
+        script_id = cursor.lastrowid
+        database.conn.commit()
+        
+        return [types.TextContent(
+            type="text",
+            text=f"✅ Script saved to database:\n\nScript ID: {script_id}\nName: {script_name}\nDescription: {description}\n\nUse execute_script_content_by_id(script_id={script_id}) to run it."
+        )]
+        
+    except Exception as e:
+        logger.error(f"Error saving script: {e}")
+        return [types.TextContent(
+            type="text",
+            text=f"Error saving script: {str(e)}"
+        )]
+
+
+async def _execute_script_content_by_id(
+    script_id: int,
+    timeout: int,
+    output_mode: str,
+    conversation_id: int,
+    shared_state,
+    config,
+    web_server,
+    database=None,
+    hosts_manager=None
+) -> list[types.TextContent]:
+    """Execute saved batch script by ID"""
+    
+    if not database or not database.is_connected():
+        return [types.TextContent(
+            type="text",
+            text="Error: Database not connected"
+        )]
+    
+    try:
+        # Load script from database
+        cursor = database.conn.cursor()
+        cursor.execute("""
+            SELECT script_content, description 
+            FROM batch_scripts 
+            WHERE id = ?
+        """, (script_id,))
+        
+        script = cursor.fetchone()
+        
+        if not script:
+            return [types.TextContent(
+                type="text",
+                text=f"Error: Script with ID {script_id} not found"
+            )]
+        
+        content, description = script
+        
+        # Execute using existing execute_script_content function
+        return await _execute_script_content(
+            script_content=content,
+            description=description,
+            timeout=timeout,
+            output_mode=output_mode,
+            shared_state=shared_state,
+            config=config,
+            web_server=web_server,
+            database=database,
+            hosts_manager=hosts_manager,
+            conversation_id=conversation_id
+        )
+        
+    except Exception as e:
+        logger.error(f"Error executing script by ID: {e}")
+        return [types.TextContent(
+            type="text",
+            text=f"Error executing script: {str(e)}"
+        )]
+
+
+async def _delete_batch_script(
+    script_id: int,
+    confirm: bool,
+    database=None
+) -> list[types.TextContent]:
+    """Delete batch script (hard delete with confirmation)"""
+    
+    if not database or not database.is_connected():
+        return [types.TextContent(
+            type="text",
+            text="Error: Database not connected"
+        )]
+    
+    try:
+        cursor = database.conn.cursor()
+        
+        # STEP 1: First call without confirm - show details and warn
+        if not confirm:
+            cursor.execute("""
+                SELECT 
+                    id, name, description, 
+                    times_used, last_used_at, created_at,
+                    (SELECT COUNT(*) FROM batch_executions WHERE script_name = batch_scripts.name) as execution_count
+                FROM batch_scripts 
+                WHERE id = ?
+            """, (script_id,))
+            
+            script = cursor.fetchone()
+            
+            if not script:
+                return [types.TextContent(
+                    type="text",
+                    text=f"Error: Script with ID {script_id} not found"
+                )]
+            
+            # Format warning message
+            warning = [
+                "⚠️ CONFIRM DELETION",
+                "",
+                f"Script ID: {script[0]}",
+                f"Name: {script[1]}",
+                f"Description: {script[2] or 'N/A'}",
+                f"Times Used: {script[3]}",
+                f"Last Used: {script[4] or 'Never'}",
+                f"Created: {script[5]}",
+                f"Execution History: {script[6]} executions recorded",
+                "",
+                "⚠️ WARNING: This will permanently delete the script.",
+                "⚠️ Execution history will remain but script content will be lost.",
+                "",
+                "To proceed, call delete_batch_script with confirm=true"
+            ]
+            
+            return [types.TextContent(
+                type="text",
+                text="\n".join(warning)
+            )]
+        
+        # STEP 2: Second call with confirm=true - actually delete
+        # Get script name before deletion
+        cursor.execute("SELECT name FROM batch_scripts WHERE id = ?", (script_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return [types.TextContent(
+                type="text",
+                text=f"Error: Script with ID {script_id} not found"
+            )]
+        
+        script_name = result[0]
+        
+        # Hard delete from batch_scripts
+        cursor.execute("DELETE FROM batch_scripts WHERE id = ?", (script_id,))
+        database.conn.commit()
+        
+        return [types.TextContent(
+            type="text",
+            text=f"✅ Script deleted: {script_name} (ID: {script_id})\n\nExecution history preserved in batch_executions table."
+        )]
+        
+    except Exception as e:
+        logger.error(f"Error deleting script: {e}")
+        return [types.TextContent(
+            type="text",
+            text=f"Error deleting script: {str(e)}"
+        )]
+
+
+# ============================================================================
+# EXISTING: Batch Execution Tool Implementations (unchanged)
+# ============================================================================
+
 @requires_connection
-async def _execute_batch_script(
+async def _execute_script_content(
     script_content: str,
     description: str,
     timeout: int,
@@ -202,7 +757,6 @@ async def _execute_batch_script(
             
             if machine_id:
                 # Calculate content hash for deduplication
-                import hashlib
                 content_hash = hashlib.sha256(script_content.encode()).hexdigest()
                 
                 # STEP 1: Check if this exact script already exists in database
@@ -329,7 +883,7 @@ async def _execute_batch_script(
         )
     
     # Execute batch script
-    result = await execute_batch_script(
+    result = await execute_script_content(
         script_content=script_content,
         description=description,
         timeout=timeout,
@@ -364,10 +918,6 @@ async def _execute_batch_script(
                         
             
             # Update batch execution with steps and duration
-            #logger.info(f"DEBUG result keys: {result.keys()}")
-            #logger.info(f"DEBUG execution_time field: {result.get('execution_time')}")
-            #logger.info(f"DEBUG steps_completed field: {result.get('steps_completed')}")
-
             steps_str = str(result.get('steps_completed', '0'))
             if '/' in steps_str:
                 parts = steps_str.split('/')
@@ -381,7 +931,6 @@ async def _execute_batch_script(
             # Try multiple possible field names for execution time
             execution_time = float(result.get('execution_time_seconds') or result.get('execution_time') or result.get('duration') or 0)
             execution_time = round(execution_time, 1)  # Round to 1 decimal places
-            # logger.info(f"DEBUG parsed execution_time: {execution_time}")
 
 
             # Update step progress with BOTH completed and total
@@ -400,20 +949,9 @@ async def _execute_batch_script(
                 status=batch_status,
                 duration_seconds=execution_time
             )
-                  
-            # logger.info(f"DEBUG RAW duration from result: {result.get('duration')}")
-            # logger.info(f"DEBUG RAW execution_time_seconds: {result.get('execution_time_seconds')}")
-            # raw_dur = result.get('duration', 0)
-            # logger.info(f"DEBUG before float conversion: {raw_dur}, type: {type(raw_dur)}")
-            # execution_time = float(result.get('execution_time_seconds') or result.get('execution_time') or result.get('duration') or 0)
-            # logger.info(f"DEBUG after float conversion, before rounding: {execution_time}")
-            # execution_time = round(execution_time, 2)
-            # logger.info(f"DEBUG after rounding: {execution_time}")     
                               
             # Extract actual script filename from remote path
             remote_script = result.get('remote_script_file', '/tmp/batch_script_unknown.sh')
-            # Save the bash script command to commands table
-            # ONE row per batch execution (not individual script steps)
             # Save the bash script command to commands table
             command_id = database.add_command(
                 machine_id=shared_state.current_machine_id,
@@ -470,14 +1008,14 @@ async def _execute_batch_script(
     return [types.TextContent(type="text", text=response_text)]
 
 
-async def _create_diagnostic_script(commands: list, description: str) -> list[types.TextContent]:
-    """Create diagnostic script from command list"""
+async def _build_script_from_commands(commands: list, description: str) -> list[types.TextContent]:
+    """Create batch script from command list"""
     
     try:
-        script = create_diagnostic_script(commands, description)
+        script = build_script_from_commands(commands, description)
         return [types.TextContent(
             type="text",
-            text=f"Generated diagnostic script:\n\n```bash\n{script}\n```"
+            text=f"Generated batch script:\n\n```bash\n{script}\n```"
         )]
     except Exception as e:
         logger.error(f"Error creating script: {e}")

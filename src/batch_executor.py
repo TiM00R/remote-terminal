@@ -28,7 +28,7 @@ from batch_helpers import (
 )
 
 
-async def execute_batch_script(
+async def execute_script_content(
     script_content: str,
     description: str,
     timeout: int = 300,
@@ -227,7 +227,7 @@ def _write_temp_script(script_content: str) -> str:
         return f.name
 
 
-def create_diagnostic_script(commands: list, description: str = "Diagnostics") -> str:
+def build_script_from_commands(commands: list, description: str = "Diagnostics") -> str:
     """
     Helper to create a batch diagnostic script from command list.
     
@@ -243,7 +243,7 @@ def create_diagnostic_script(commands: list, description: str = "Diagnostics") -
             {"description": "Network interfaces", "command": "ip link show"},
             {"description": "Routing table", "command": "ip route show"}
         ]
-        script = create_diagnostic_script(commands)
+        script = build_script_from_commands(commands)
     """
     lines = [
         "#!/bin/bash",

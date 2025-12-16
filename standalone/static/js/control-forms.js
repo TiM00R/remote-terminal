@@ -450,6 +450,135 @@ async function generateDynamicServerUpdateForm(form, tool) {
 }
 
 
+function createScriptSelectField(arg) {
+    const select = document.createElement('select');
+    select.id = arg.name;
+    select.name = arg.name;
+    if (!arg.required) select.required = false;
+    
+    select.innerHTML = '<option value="">Loading scripts...</option>';
+    select.disabled = true;
+    
+    window.controlMain.getBatchScripts().then(scripts => {
+        select.disabled = false;
+        
+        if (!scripts || scripts.length === 0) {
+            select.innerHTML = '<option value="">No scripts available</option>';
+            return;
+        }
+        
+        select.innerHTML = arg.required ? '' : '<option value="">-- Select Script --</option>';
+        
+        scripts.forEach(script => {
+            const option = document.createElement('option');
+            option.value = script.id;
+            let desc = script.description || 'No description';
+            if (desc.length > 60) {
+                desc = desc.substring(0, 60).trim() + '...';
+            }
+            option.textContent = `${script.id} - ${desc}`;
+            select.appendChild(option);
+        });
+        
+        // ADD THIS: Auto-load script content for save_batch_script tool
+        if (arg.name === 'script_id') {
+            select.addEventListener('change', async () => {
+                const scriptId = select.value;
+                if (!scriptId) return;
+                
+                // Fetch script content
+                try {
+                    const response = await fetch('http://localhost:8081/execute_mcp_tool', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tool: 'get_batch_script',
+                            arguments: { script_id: parseInt(scriptId) }
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    console.log('Script fetch result:', result);
+                    
+                    // Extract content from response
+                    if (result.result && typeof result.result === 'string') {
+                        // Parse the text response to extract script content
+                        const lines = result.result.split('\n');
+                        let inScript = false;
+                        let scriptContent = [];
+                        
+                        for (const line of lines) {
+                            if (line === '```bash') {
+                                inScript = true;
+                                continue;
+                            }
+                            if (line === '```') {
+                                inScript = false;
+                                break;
+                            }
+                            if (inScript) {
+                                scriptContent.push(line);
+                            }
+                        }
+                        
+                        // Populate the content textarea
+                        const contentField = document.getElementById('content');
+                        
+                        // Populate the content textarea
+                        if (contentField) {
+                            const text = scriptContent.join('\n');
+                            
+                            // Check if it's a contentEditable element or regular textarea
+                            if (contentField.contentEditable === 'true') {
+                                // Temporarily remove input handler to prevent double-highlighting
+                                if (contentField._inputHandler) {
+                                    contentField.removeEventListener('input', contentField._inputHandler);
+                                }
+                                
+                                // Set the content with highlighting
+                                contentField.textContent = text;
+                                contentField.innerHTML = highlightBash(text);
+                                
+                                // Re-attach the input handler
+                                if (contentField._inputHandler) {
+                                    contentField.addEventListener('input', contentField._inputHandler);
+                                }
+                            } else {
+                                contentField.value = text;
+                            }
+                        }
+                        
+                        // ALSO populate description field
+                        const descriptionField = document.getElementById('description');
+                        if (descriptionField) {
+                            // Extract description from response
+                            for (const line of lines) {
+                                if (line.trim().startsWith('Description: ')) {
+                                    const desc = line.trim().substring(13); // Remove "Description: " prefix
+                                    descriptionField.value = desc;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('Error fetching script:', error);
+                    alert('Failed to load script content');
+                }
+            });
+        }
+        
+    }).catch(error => {
+        console.error('Error loading batch scripts:', error);
+        select.disabled = false;
+        select.innerHTML = '<option value="">Error loading scripts</option>';
+    });
+    
+    return select;
+}
+
+
 function createFormField(arg, tool) {
     const group = document.createElement('div');
     group.className = 'form-group';
@@ -464,6 +593,12 @@ function createFormField(arg, tool) {
         return createFilePickerField(arg);
     } else if (arg.type === 'recipe_select') {
         return createRecipeSelectField(arg);
+    } else if (arg.type === 'conversation_select') {
+        return createConversationSelectField(arg);
+    } else if (arg.type === 'command_select') {
+        return createCommandSelectField(arg);
+    } else if (arg.type === 'script_select') {
+        return createScriptSelectField(arg);
     }
 
     // Label
@@ -506,13 +641,41 @@ function createFormField(arg, tool) {
             if (arg.default === opt) option.selected = true;
             input.appendChild(option);
         });
-    } else if (arg.type === 'textarea') {
-        input = document.createElement('textarea');
-        input.id = arg.name;
-        input.name = arg.name;
-        input.rows = arg.rows || 5;
-        input.placeholder = arg.placeholder || '';
-        if (arg.default) input.value = arg.default;
+    }  else if (arg.type === 'textarea') {
+        // Special handling for script content fields - use syntax highlighting
+        if (arg.name === 'content' || arg.name === 'script_content') {
+            input = document.createElement('pre');
+            input.id = arg.name;
+            input.contentEditable = 'true';
+            input.className = 'bash-editor';
+            input.style.minHeight = (arg.rows || 15) * 1.5 + 'em';
+            input.innerHTML = arg.placeholder ? `<span style="color: #666; font-style: italic;">${arg.placeholder}</span>` : '';
+            
+            // Clear placeholder on focus
+            input.addEventListener('focus', function() {
+                if (this.innerHTML.includes('font-style: italic')) {
+                    this.innerHTML = '';
+                }
+            });
+
+            // Apply syntax highlighting on input
+            const inputHandler = function() {
+                const cursorPos = saveCursorPosition(this);
+                this.innerHTML = highlightBash(this.textContent);
+                restoreCursorPosition(this, cursorPos);
+            };
+            input._inputHandler = inputHandler;
+            input.addEventListener('input', inputHandler);
+
+
+        } else {
+            input = document.createElement('textarea');
+            input.id = arg.name;
+            input.name = arg.name;
+            input.rows = arg.rows || 5;
+            input.placeholder = arg.placeholder || '';
+            if (arg.default) input.value = arg.default;
+        }
     }
     
     if (arg.required) {
@@ -656,6 +819,124 @@ function createRecipeSelectField(arg) {
     return group;
 }
 
+function createConversationSelectField(arg) {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    
+    const label = document.createElement('label');
+    label.textContent = arg.label;
+    label.htmlFor = arg.name;
+    if (arg.required) {
+        label.classList.add('required');
+    }
+    group.appendChild(label);
+    
+    const conversations = window.controlMain.getCachedConversations();
+    
+    const select = document.createElement('select');
+    select.id = arg.name;
+    select.name = arg.name;
+    if (arg.required) select.required = true;
+    
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = 'Choose a conversation...';
+    select.appendChild(placeholderOpt);
+    
+    if (conversations && conversations.length > 0) {
+        conversations.forEach(conv => {
+            const option = document.createElement('option');
+            option.value = conv.id;
+            const statusIcon = conv.status === 'in_progress' ? '🔄' : 
+                              conv.status === 'success' ? '✓' : 
+                              conv.status === 'failed' ? '✗' : '';
+            option.textContent = `${conv.id} - ${conv.goal_summary} ${statusIcon}`;
+            select.appendChild(option);
+        });
+    } else {
+        const noConvOpt = document.createElement('option');
+        noConvOpt.value = '';
+        noConvOpt.textContent = 'No conversations available';
+        noConvOpt.disabled = true;
+        select.appendChild(noConvOpt);
+    }
+    
+    group.appendChild(select);
+    return group;
+}
+
+
+function createCommandSelectField(arg) {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    
+    const label = document.createElement('label');
+    label.textContent = arg.label;
+    label.htmlFor = arg.name;
+    if (arg.required) {
+        label.classList.add('required');
+    }
+    group.appendChild(label);
+    
+    // Create select with loading message
+    const select = document.createElement('select');
+    select.id = arg.name;
+    select.name = arg.name;
+    if (arg.required) select.required = true;
+    select.disabled = true; // Disabled while loading
+    
+    const loadingOpt = document.createElement('option');
+    loadingOpt.value = '';
+    loadingOpt.textContent = 'Loading commands...';
+    select.appendChild(loadingOpt);
+    
+    group.appendChild(select);
+    
+    // Load session commands asynchronously
+    window.controlMain.getSessionCommands().then(commands => {
+        select.innerHTML = ''; // Clear loading message
+        
+        const placeholderOpt = document.createElement('option');
+        placeholderOpt.value = '';
+        placeholderOpt.textContent = 'Choose a command...';
+        select.appendChild(placeholderOpt);
+        
+        if (commands && commands.length > 0) {
+            commands.forEach(cmd => {
+                const option = document.createElement('option');
+                option.value = cmd.command_id;
+                const statusIcon = cmd.status === 'running' ? '🔄' : 
+                                  cmd.status === 'completed' ? '✓' : 
+                                  cmd.status === 'killed' ? '✗' : '';
+                // Truncate command at 60 chars, trim whitespace
+                const cmdText = cmd.command.trim().substring(0, 60);
+                const truncated = cmd.command.length > 60 ? '...' : '';
+                option.textContent = `${statusIcon} ${cmd.command_id} - ${cmdText}${truncated}`;
+                select.appendChild(option);
+            });
+        } else {
+            const noCommandsOpt = document.createElement('option');
+            noCommandsOpt.value = '';
+            noCommandsOpt.textContent = 'No commands in session';
+            noCommandsOpt.disabled = true;
+            select.appendChild(noCommandsOpt);
+        }
+        
+        select.disabled = false; // Enable after loading
+    }).catch(error => {
+        console.error('Failed to load session commands:', error);
+        select.innerHTML = '';
+        const errorOpt = document.createElement('option');
+        errorOpt.value = '';
+        errorOpt.textContent = 'Error loading commands';
+        errorOpt.disabled = true;
+        select.appendChild(errorOpt);
+        select.disabled = true;
+    });
+    
+    return group;
+}
+
 
 function createCheckboxField(arg) {
     const group = document.createElement('div');
@@ -761,8 +1042,15 @@ function serializeForm(form, tool) {
                 });
                 return obj;
             });
+        
         } else if (arg.type === 'recipe_select') {
             // Handle recipe_select specially - convert to number
+            const input = form.querySelector(`#${arg.name}`);
+            if (input && input.value) {
+                data[arg.name] = parseInt(input.value);
+            }
+        } else if (arg.type === 'conversation_select') {
+            // Handle conversation_select specially - convert to number
             const input = form.querySelector(`#${arg.name}`);
             if (input && input.value) {
                 data[arg.name] = parseInt(input.value);
@@ -770,7 +1058,14 @@ function serializeForm(form, tool) {
         } else {
             const input = form.querySelector(`#${arg.name}`);
             if (input) {
-                let value = input.value;
+                let value;
+                
+                // Special handling for contentEditable elements (bash-editor)
+                if (input.contentEditable === 'true') {
+                    value = input.textContent;
+                } else {
+                    value = input.value;
+                }
                 
                 // CRITICAL: Convert Windows backslashes to forward slashes for file paths
                 // This prevents escape sequence interpretation (e.g., \t becomes tab, \r becomes carriage return)
@@ -784,19 +1079,40 @@ function serializeForm(form, tool) {
                     value = value ? parseFloat(value) : undefined;
                 }
                 
+                // // Special handling for commands field - parse JSON if present
+                // if (arg.name === 'commands') {
+                //     const cmdElement = form.querySelector(`#${arg.name}`);
+                //     value = cmdElement ? cmdElement.textContent : '';
+                //     if (value) {
+                //         try {
+                //             value = JSON.parse(value);
+                //         } catch (e) {
+                //             console.warn('Failed to parse commands JSON');
+                //         }
+                //     }
+                // }
+                
                 // Special handling for commands field - parse JSON if present
                 if (arg.name === 'commands') {
                     const cmdElement = form.querySelector(`#${arg.name}`);
-                    value = cmdElement ? cmdElement.textContent : '';
+                    // Check if it's a contentEditable element (like <pre>) or a regular input (like <textarea>)
+                    if (cmdElement.contentEditable === 'true') {
+                        value = cmdElement.textContent;
+                    } else {
+                        value = cmdElement.value;  // Regular textarea or input
+                    }
+                    
                     if (value) {
                         try {
                             value = JSON.parse(value);
                         } catch (e) {
-                            console.warn('Failed to parse commands JSON');
+                            console.warn('Failed to parse commands JSON:', e);
                         }
                     }
                 }
-                
+
+
+
                 // FIXED: Always include required fields, skip only empty optional fields
                 // This allows browser validation to catch missing required fields
                 if (arg.required) {
@@ -838,9 +1154,9 @@ async function executeTool(tool) {
     
     try {
         // Serialize form data
-        const arguments = serializeForm(form, tool);
+        const toolArgs = serializeForm(form, tool);
         
-        console.log('Executing tool:', tool.name, 'with arguments:', arguments);
+        console.log('Executing tool:', tool.name, 'with arguments:', toolArgs);
         
         // Call API
         const response = await fetch('http://localhost:8081/execute_mcp_tool', {
@@ -848,7 +1164,7 @@ async function executeTool(tool) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 tool: tool.name,
-                arguments: arguments
+                arguments: toolArgs
             })
         });
         
@@ -864,6 +1180,76 @@ async function executeTool(tool) {
         executeBtn.textContent = `▶️ Execute ${tool.name}`;
     }
 }
+
+// Bash syntax highlighting helper
+// Bash syntax highlighting helper
+function highlightBash(code) {
+    // First escape HTML entities
+    let highlighted = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    
+    // Then apply syntax highlighting (working on escaped text)
+    highlighted = highlighted
+        // Comments (# to end of line)
+        .replace(/(#[^\n]*)/g, '<span style="color: #6A9955;">$1</span>')
+        // Strings (double quotes)
+        .replace(/(&quot;(?:[^&]|&(?!quot;))*&quot;)/g, '<span style="color: #CE9178;">$1</span>')
+        // Variables ($VAR or ${VAR})
+        .replace(/(\$\w+|\$\{[^}]+\})/g, '<span style="color: #9CDCFE;">$1</span>')
+        // Keywords
+        .replace(/\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|source|export|local|readonly)\b/g, '<span style="color: #C586C0;">$1</span>')
+        // echo command (special - very common)
+        .replace(/\b(echo)\b/g, '<span style="color: #DCDCAA;">$1</span>')
+        // Built-in commands
+        .replace(/\b(ls|cd|pwd|cat|grep|awk|sed|find|chmod|chown|mkdir|rm|cp|mv|exit)\b/g, '<span style="color: #4EC9B0;">$1</span>')
+        // Numbers
+        .replace(/\b(\d+)\b/g, '<span style="color: #B5CEA8;">$1</span>');
+    
+    return highlighted;
+}
+
+// Cursor position helpers
+function saveCursorPosition(element) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return 0;
+    
+    const range = selection.getRangeAt(0);
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(element);
+    preRange.setEnd(range.endContainer, range.endOffset);
+    return preRange.toString().length;
+}
+
+function restoreCursorPosition(element, position) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    let charCount = 0;
+    let nodeStack = [element];
+    let node, foundStart = false;
+    
+    while (!foundStart && (node = nodeStack.pop())) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const nextCharCount = charCount + node.length;
+            if (position <= nextCharCount) {
+                range.setStart(node, position - charCount);
+                range.collapse(true);
+                foundStart = true;
+            }
+            charCount = nextCharCount;
+        } else {
+            for (let i = node.childNodes.length - 1; i >= 0; i--) {
+                nodeStack.push(node.childNodes[i]);
+            }
+        }
+    }
+    
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
 
 // Export for global access
 window.generateForm = generateForm;

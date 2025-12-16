@@ -164,8 +164,8 @@ RETURN VALUES:
             }
         ),
         types.Tool(
-            name="list_commands",
-            description="List all tracked commands with status. Useful for seeing what's running or recently completed.",
+            name="list_session_commands",
+            description="List tracked commands from current session with status. Shows commands in CommandRegistry (in-memory, max 50). Useful for checking what's currently running or was recently executed in this session. For historical commands from database, use list_command_history instead.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -173,6 +173,72 @@ RETURN VALUES:
                         "type": "string",
                         "description": "Optional: 'running', 'completed', or 'killed'",
                         "enum": ["running", "completed", "killed"]
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="list_command_history",
+            description="""List command execution history from database with flexible filters.
+
+Query persistent command history across all servers and sessions. Useful for:
+- Reviewing what commands were executed on a server
+- Finding commands from specific dates or time periods
+- Debugging by examining command history
+- Auditing command execution
+- Analyzing errors across multiple sessions
+
+Returns database records with integer IDs, command text, execution status, 
+timestamps, error information, and conversation context when available.
+
+By default, shows commands from the currently connected server.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "machine_id": {
+                        "type": "string",
+                        "description": "Filter by server machine ID (uses current server if omitted)"
+                    },
+                    "conversation_id": {
+                        "type": "integer",
+                        "description": "Filter by conversation ID"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["executed", "cancelled", "timeout", "undone"],
+                        "description": "Filter by execution status"
+                    },
+                    "has_errors": {
+                        "type": "boolean",
+                        "description": "Only show commands with errors (true) or without errors (false)"
+                    },
+                    "after_date": {
+                        "type": "string",
+                        "description": "Only commands after this date (ISO format: YYYY-MM-DD)"
+                    },
+                    "before_date": {
+                        "type": "string",
+                        "description": "Only commands before this date (ISO format: YYYY-MM-DD, exclusive)"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of commands to return (default: 50, max: 500)",
+                        "default": 50,
+                        "minimum": 1,
+                        "maximum": 500
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Skip this many commands (for pagination, default: 0)",
+                        "default": 0,
+                        "minimum": 0
+                    },
+                    "order": {
+                        "type": "string",
+                        "enum": ["newest_first", "oldest_first"],
+                        "description": "Sort order (default: newest_first)",
+                        "default": "newest_first"
                     }
                 }
             }
@@ -230,12 +296,28 @@ async def handle_call(name: str, arguments: dict, shared_state, config,
             hosts_manager=hosts_manager
         )
         
-    elif name == "list_commands":
-        return await _list_commands(
+    elif name == "list_session_commands":
+        return await _list_session_commands(
             shared_state,
             arguments.get("status_filter")
         )
+
+    elif name == "list_command_history":
+        return await _list_command_history(
+            shared_state=shared_state,
+            database=database,
+            machine_id=arguments.get("machine_id"),
+            conversation_id=arguments.get("conversation_id"),
+            status=arguments.get("status"),
+            has_errors=arguments.get("has_errors"),
+            after_date=arguments.get("after_date"),
+            before_date=arguments.get("before_date"),
+            limit=arguments.get("limit", 50),
+            offset=arguments.get("offset", 0),
+            order=arguments.get("order", "newest_first")
+        )
     
+
     # Not our tool, return None
     return None
 
@@ -852,8 +934,170 @@ async def _cancel_command(shared_state, command_id: str,
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
-async def _list_commands(shared_state, status_filter: str = None) -> list[types.TextContent]:
-    """List all commands"""
+
+
+async def _list_command_history(shared_state, database, machine_id: str = None,
+                                conversation_id: int = None, status: str = None,
+                                has_errors: bool = None, after_date: str = None,
+                                before_date: str = None, limit: int = 50,
+                                offset: int = 0, order: str = "newest_first") -> list[types.TextContent]:
+    """List command history from database with filters"""
+    
+    # Check database connection
+    if not database or not database.is_connected():
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": "Database not connected. Command history unavailable."
+            }, indent=2)
+        )]
+    
+    # Determine machine_id
+    if machine_id is None:
+        machine_id = shared_state.current_machine_id
+        if not machine_id:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "error": "No server specified. Either connect to a server or provide machine_id parameter."
+                }, indent=2)
+            )]
+    
+    # Validate date formats
+    if after_date:
+        try:
+            datetime.fromisoformat(after_date)
+        except ValueError:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "error": f"Invalid after_date format: '{after_date}'. Use YYYY-MM-DD (e.g., 2024-12-01)"
+                }, indent=2)
+            )]
+    
+    if before_date:
+        try:
+            datetime.fromisoformat(before_date)
+        except ValueError:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "error": f"Invalid before_date format: '{before_date}'. Use YYYY-MM-DD (e.g., 2024-12-02)"
+                }, indent=2)
+            )]
+    
+    # Validate limit
+    if limit > 500:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": f"Limit {limit} exceeds maximum allowed (500)"
+            }, indent=2)
+        )]
+    
+    # Build query
+    query = """
+        SELECT 
+            c.id,
+            c.command_text,
+            c.status,
+            c.has_errors,
+            c.error_context,
+            c.line_count,
+            c.executed_at,
+            c.conversation_id,
+            c.backup_file_path,
+            c.sequence_num,
+            conv.goal_summary as conversation_goal
+        FROM commands c
+        LEFT JOIN conversations conv ON c.conversation_id = conv.id
+        WHERE 1=1
+    """
+    
+    params = []
+    
+    # Apply filters
+    if machine_id:
+        query += " AND c.machine_id = ?"
+        params.append(machine_id)
+    
+    if conversation_id is not None:
+        query += " AND c.conversation_id = ?"
+        params.append(conversation_id)
+    
+    if status:
+        query += " AND c.status = ?"
+        params.append(status)
+    
+    if has_errors is not None:
+        query += " AND c.has_errors = ?"
+        params.append(1 if has_errors else 0)
+    
+    if after_date:
+        query += " AND DATE(c.executed_at) >= DATE(?)"
+        params.append(after_date)
+    
+    if before_date:
+        query += " AND DATE(c.executed_at) < DATE(?)"
+        params.append(before_date)
+    
+    # Order
+    order_clause = "DESC" if order == "newest_first" else "ASC"
+    query += f" ORDER BY c.executed_at {order_clause}"
+    
+    # Pagination
+    query += f" LIMIT {limit} OFFSET {offset}"
+    
+    # Execute query
+    try:
+        cursor = database.conn.cursor()
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        
+        # Convert to list of dicts
+        commands = []
+        for row in results:
+            cmd = dict(row)
+            # Format executed_at as ISO string if it's a datetime
+            if cmd.get('executed_at'):
+                if isinstance(cmd['executed_at'], datetime):
+                    cmd['executed_at'] = cmd['executed_at'].isoformat()
+            commands.append(cmd)
+        
+        # Build response
+        response = {
+            "commands": commands,
+            "metadata": {
+                "total_returned": len(commands),
+                "limit": limit,
+                "offset": offset,
+                "has_more": len(commands) == limit,
+                "filters_applied": {
+                    "machine_id": machine_id[:16] + "..." if machine_id and len(machine_id) > 16 else machine_id,
+                    "conversation_id": conversation_id,
+                    "status": status,
+                    "has_errors": has_errors,
+                    "after_date": after_date,
+                    "before_date": before_date
+                },
+                "order": order
+            }
+        }
+        
+        return [types.TextContent(type="text", text=json.dumps(response, indent=2))]
+        
+    except Exception as e:
+        logger.error(f"Error querying command history: {e}", exc_info=True)
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "error": f"Database query failed: {str(e)}"
+            }, indent=2)
+        )]
+
+
+async def _list_session_commands(shared_state, status_filter: str = None) -> list[types.TextContent]:
+    """List tracked commands from current session (in-memory CommandRegistry)"""
     if status_filter:
         commands = shared_state.command_registry.get_by_status(status_filter)
     else:
@@ -872,3 +1116,4 @@ async def _list_commands(shared_state, status_filter: str = None) -> list[types.
     }
     
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+

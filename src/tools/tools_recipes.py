@@ -12,9 +12,9 @@ from .tools_conversations import _start_conversation, _end_conversation
 from .decorators import requires_connection
 
 #from .tools_commands import _execute_command
-#from .tools_batch import _execute_batch_script
+#from .tools_batch import _execute_script_content
 from .tools_commands import execute_command_with_track
-from .tools_batch import _execute_batch_script
+from .tools_batch import _execute_script_content
 
 import sqlite3
 
@@ -189,7 +189,7 @@ Use this to:
 
 COMMAND TYPES:
 1. Shell: {"sequence": 1, "command": "ls -la", "description": "List"}
-2. MCP: {"sequence": 2, "type": "mcp_tool", "tool": "execute_batch_script", "params": {...}}
+2. MCP: {"sequence": 2, "type": "mcp_tool", "tool": "execute_script_content", "params": {...}}
 """,
             inputSchema={
                 "type": "object",
@@ -413,7 +413,7 @@ async def _create_recipe(database: DatabaseManager, arguments: dict):
                     command_sequence.append({
                         "sequence": cmd['sequence_num'],
                         "type": "mcp_tool",
-                        "tool": "execute_batch_script",
+                        "tool": "execute_script_content",
                         "params": {
                             "description": batch_result[0],
                             "script_content": batch_result[1],
@@ -895,11 +895,11 @@ async def _execute_recipe(database, arguments, shared_state, config, web_server,
             if cmd.get('type') == 'mcp_tool':
                 tool_name = cmd.get('tool')
                 
-                if tool_name == 'execute_batch_script':
+                if tool_name == 'execute_script_content':
                     params = cmd.get('params', {})
                     
                     # Call in the EXACT order expected by handle_call
-                    result = await _execute_batch_script(
+                    result = await _execute_script_content(
                         params.get('script_content'),      # positional arg 1
                         params.get('description'),         # positional arg 2
                         300,                               # timeout (positional arg 3)

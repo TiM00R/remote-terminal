@@ -98,7 +98,7 @@ def export_recipe(recipe_id: int, db_path: str = 'data/remote_terminal.db', outp
         seq = cmd['sequence']
         total = len(command_sequence)
         
-        if cmd.get('type') == 'mcp_tool' and cmd.get('tool') == 'execute_batch_script':
+        if cmd.get('type') == 'mcp_tool' and cmd.get('tool') == 'execute_script_content':
             # Batch script - embed the script content
             params = cmd.get('params', {})
             batch_description = params.get('description', f'Batch step {seq}')
