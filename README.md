@@ -39,23 +39,6 @@ And Claude does it - executing commands, analyzing output, saving useful scripts
 - **🔄 Multi-Terminal Sync** - Open multiple terminals, all perfectly synchronized
 - **✨ Bash Syntax Highlighting** - VS Code-style colors in standalone UI (NEW in 3.1)
 
-### NEW in Version 3.1: Batch Script Management
-
-**Save and reuse your batch scripts!**
-
-- **Automatic deduplication** - Same script content = same database entry
-- **Usage statistics** - Track times_used and last_used_at
-- **Edit mode** - Load existing script, modify, and save
-- **Browse library** - List scripts with search and sorting
-- **Two-step deletion** - Confirmation required to prevent accidents
-
-**Example workflow:**
-```
-1. "Run docker diagnostics" → Script executes and auto-saves
-2. "List my batch scripts" → Browse saved scripts with stats
-3. "Execute script 5" → Reuse saved script instantly
-4. "Load script 5 for editing" → Modify in UI and save changes
-```
 
 ### The Interactive Web Terminal
 
@@ -115,89 +98,119 @@ Behind the scenes, Remote Terminal uses a smart two-stream approach:
 - **Both:** Shared SSH session, synchronized state
 - **Best of both worlds!**
 
----
 
 ## 🚀 Quick Start
 
-### 1. Install
+### Installation
 
-**Create a folder for the project** (location doesn't matter - use any path you prefer):
-
-Examples: `D:\Projects\remote_terminal` or `C:\MyMCPProj\remote_terminal`
-
-**Navigate to parent folder:**
-```
-cd D:\Projects
+**Step 1: Create Installation Directory**
+```powershell
+# Choose a location for your installation (example: C:\RemoteTerminal)
+mkdir C:\RemoteTerminal
+cd C:\RemoteTerminal
 ```
 
-**Clone the repository:**
-```
-git clone https://github.com/TiM00R/remote-terminal.git
-cd remote_terminal
-```
-
-**Set up Python environment:**
-```
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install mcp
+**Step 2: Install Package**
+```powershell
+# Create dedicated virtual environment
+python -m venv remote-terminal-env
+remote-terminal-env\Scripts\activate
+pip install remote-terminal-mcp
 ```
 
-### 2. Configure Your Server
-
-Edit `hosts.yaml`:
-```yaml
-servers:
-  - name: my-server
-    host: 192.168.1.100
-    user: username
-    password: password
-    port: 22
-    default: true
-```
-
-### 3. Configure Claude Desktop
+**Step 3: Configure Claude Desktop**
 
 Edit `%APPDATA%\Claude\claude_desktop_config.json`:
+
 ```json
 {
-  "mcpServers": {
-    "remote-terminal": {
-      "command": "D:\\Projects\\remote_terminal\\.venv\\Scripts\\python.exe",
-      "args": ["D:\\Projects\\remote_terminal\\src\\mcp_server.py"],
-      "env": {"PYTHONPATH": "D:\\Projects\\remote_terminal\\src"}
+    "mcpServers": {
+        "remote-terminal": {
+            "command": "C:\\RemoteTerminal\\remote-terminal-env\\Scripts\\remote-terminal-mcp.exe",
+            "env": {
+                "REMOTE_TERMINAL_ROOT": "C:\\RemoteTerminal"
+            }
+        }
     }
-  }
 }
 ```
 
-### 4. Restart Claude Desktop
+**Important:** Replace `C:\RemoteTerminal` with your actual installation path from Step 1.
 
-Exit completely and restart.
+**Step 4: First Run - Auto Setup**
 
-### 5. Test It!
+Restart Claude Desktop. On first use, configuration files will automatically copy to `C:\RemoteTerminal`:
+- `config.yaml` - Default settings (auto-created from package defaults)
+- `hosts.yaml` - Server list (auto-created from template)
 
-Ask Claude:
+
+**Step 5: Configure Your Servers**
+
+You have two options to configure your servers:
+
+**Option A: Manual Configuration (Recommended for first server)**
+
+Edit `C:\RemoteTerminal\hosts.yaml`:
+```yaml
+servers:
+  - name: My Server
+    host: 192.168.1.100
+    user: username
+    password: your_password
+    port: 22
+    description: My development server
+    tags:
+      - development
+# Optional: Set default server for auto-connect
+# Use list_servers to see which server is marked as [DEFAULT]
+default_server: My Server
 ```
-Execute the command 'whoami' on my server
+
+**Option B: AI-Assisted Configuration**
+
+Ask Claude to help you add a new server:
+```
+Claude, add a new server to my configuration:
+- Name: Production Server
+- Host: 192.168.1.100
+- User: admin
+- Password: mypassword
+- Port: 22
 ```
 
-**Interactive terminal opens automatically** → Type or watch commands execute → Claude responds!
+Claude will use the `add_server` tool to update your `hosts.yaml` file automatically.
 
-------
+Restart Claude Desktop and test:
+```
+List my configured servers
+```
+
+
+
+**Step 6: (Optional) Run Standalone Web Interface**
+```powershell
+cd C:\RemoteTerminal
+remote-terminal-env\Scripts\activate
+remote-terminal-standalone
+```
+
+Access at:
+- Control Panel: http://localhost:8081
+- Terminal: http://localhost:8082
+
+---
 
 ## 📖 Documentation
 
 Complete guides for every use case:
 
-- **[QUICK_START.md](docs/QUICK_START.md)** - Get running in 5 minutes
-- **[INSTALLATION.md](docs/INSTALLATION.md)** - Detailed setup instructions
-- **[USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete feature walkthrough
-- **[FEATURE_REFERENCE.md](docs/FEATURE_REFERENCE.md)** - All MCP tools reference
-- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common problems and solutions
-- **[WEBSOCKET_BROADCAST.md](docs/WEBSOCKET_BROADCAST.md)** - Multi-terminal synchronization details
-- **[RELEASE_NOTES_v3.1.md](docs/RELEASE_NOTES_v3.1.md)** - Release notes for version 3.1
+- **[Quick Start](https://github.com/TiM00R/remote-terminal/blob/master/docs/QUICK_START.md)** — Get running in 5 minutes  
+- **[Installation](https://github.com/TiM00R/remote-terminal/blob/master/docs/INSTALLATION.md)** — Detailed setup instructions  
+- **[User Guide](https://github.com/TiM00R/remote-terminal/blob/master/docs/USER_GUIDE.md)** — Complete feature walkthrough  
+- **[Feature Reference](https://github.com/TiM00R/remote-terminal/blob/master/docs/FEATURE_REFERENCE.md)** — All MCP tools reference  
+- **[Troubleshooting](https://github.com/TiM00R/remote-terminal/blob/master/docs/TROUBLESHOOTING.md)** — Common problems and solutions  
+- **[WebSocket Broadcast](https://github.com/TiM00R/remote-terminal/blob/master/docs/WEBSOCKET_BROADCAST.md)** — Multi-terminal synchronization details  
+- **[Release Notes v3.1](https://github.com/TiM00R/remote-terminal/blob/master/docs/RELEASE_NOTES_v3.1.md)** — Release notes for version 3.1
 
 ---
 
@@ -292,7 +305,10 @@ Service: nginx.service is active
 
 ```
 remote_terminal/
-├── data/                      # SQLite database
+├── config/                    # Default configuration templates
+│   ├── config.yaml            # Default settings (packaged)
+│   └── hosts.yaml.example     # Server template (packaged)
+├── data/                      # SQLite database (user directory)
 │   └── remote_terminal.db     # Command history, conversations, recipes, scripts
 ├── docs/                      # Documentation
 │   ├── QUICK_START.md
@@ -311,6 +327,7 @@ remote_terminal/
 │   │   ├── tools_batch.py     # Batch execution & script management
 │   │   ├── tools_conversations.py
 │   │   └── tools_recipes.py
+│   ├── config_init.py         # First-run config setup
 │   ├── mcp_server.py          # MCP server entry point
 │   ├── ssh_manager.py         # SSH connection handling
 │   ├── command_state.py       # Command tracking
@@ -319,20 +336,17 @@ remote_terminal/
 │   ├── output_filter.py       # Smart filtering
 │   ├── prompt_detector.py     # Command completion detection
 │   └── web_terminal.py        # WebSocket-enabled web interface
-├── standalone/                # Standalone web UI
-│   ├── static/
-│   │   ├── css/
-│   │   │   └── control-styles.css  # Bash syntax highlighting
-│   │   ├── js/
-│   │   │   ├── control-main.js     # Script loading
-│   │   │   └── control-forms.js    # Script selectors & highlighting
-│   │   └── tool-schemas/
-│   │       └── batch.json          # Batch tool definitions
-│   ├── mcp_control.html
-│   └── standalone_mcp.py
-├── config.yaml                # Global settings
-├── hosts.yaml                 # Server configurations
-└── requirements.txt           # Python dependencies
+└── standalone/                # Standalone web UI
+    ├── static/
+    │   ├── css/
+    │   │   └── control-styles.css  # Bash syntax highlighting
+    │   ├── js/
+    │   │   ├── control-main.js     # Script loading
+    │   │   └── control-forms.js    # Script selectors & highlighting
+    │   └── tool-schemas/
+    │       └── batch.json          # Batch tool definitions
+    ├── mcp_control.html
+    └── standalone_mcp.py
 ```
 
 ### Technology Stack
@@ -348,31 +362,19 @@ remote_terminal/
 
 ## 🔧 Configuration
 
-### config.yaml
+### Configuration Files Location
 
-Controls timeouts, filtering thresholds, web server, logging:
+Configuration files are automatically copied to your working directory on first run:
 
-```yaml
-connection:
-  keepalive_interval: 30
-  connection_timeout: 10
+**For PyPI users:**
+- Set `REMOTE_TERMINAL_ROOT` in Claude Desktop config
+- Files auto-copy to that directory on first run
+- Location: `%REMOTE_TERMINAL_ROOT%\config.yaml` and `hosts.yaml`
+- User data preserved when reinstalling/upgrading
 
-command_execution:
-  default_timeout: 10
-  max_timeout: 3600
-
-claude:
-  auto_send_errors: true
-  thresholds:
-    install: 100
-    file_listing: 50
-    generic: 50
-
-server:
-  host: localhost
-  port: 8080
-  auto_open_browser: true
-```
+**Default template files packaged with installation:**
+- `config/config.yaml` - Default settings template
+- `config/hosts.yaml.example` - Server configuration template
 
 ### hosts.yaml
 
@@ -385,7 +387,7 @@ servers:
     user: admin
     password: secure_pass
     port: 22
-    default: true
+    description: Production server
     tags: production, critical
     
   - name: development
@@ -393,6 +395,8 @@ servers:
     user: dev
     password: dev_pass
     tags: development
+
+default_server: production
 ```
 
 ---
@@ -405,8 +409,9 @@ servers:
 - Web terminal bound to localhost only (not network-exposed)
 - Full command audit trail in database
 - SSH uses standard security (password authentication)
+- User config files stored outside package (preserved on reinstall)
 
-------
+---
 
 ## 📊 Performance
 
@@ -435,7 +440,7 @@ Batch execution vs sequential:
 
 ## 🔍 Advanced Features
 
-### Batch Script Library (NEW in 3.1)
+### Batch Script Library 
 
 Save batch scripts for reuse:
 
@@ -516,7 +521,7 @@ Each server tracked by unique machine_id (hardware + OS fingerprint):
    - Can only actively work with one server per session
    - Switch between servers as needed
 
-------
+---
 
 ## 🤝 Contributing
 
@@ -531,7 +536,16 @@ This is Tim's personal project. If you'd like to contribute:
 
 ## 📜 Version History
 
-### Version 3.1 (Current - December 16, 2024)
+### Version 1.1.3 (Current - December 20, 2024)
+
+**Configuration System Improvements:**
+- ✅ Auto-copy config files on first run
+- ✅ User data preserved outside package directory
+- ✅ REMOTE_TERMINAL_ROOT environment variable support
+- ✅ Simplified installation process
+- ✅ Config templates packaged in config/ folder
+
+### Version 3.1 (December 16, 2024)
 
 **NEW - Batch Script Management:**
 - ✅ 5 new MCP tools for batch script library management
@@ -580,17 +594,10 @@ This is Tim's personal project. If you'd like to contribute:
 For issues or questions:
 
 1. **Check Documentation**
-   - QUICK_START.md for setup
-   - USER_GUIDE.md for features
-   - FEATURE_REFERENCE.md for tool details
-   - TROUBLESHOOTING.md for problems
-   - WEBSOCKET_BROADCAST.md for multi-terminal details
-   - RELEASE_NOTES_v3.1.md for latest changes
-
+  
 2. **Review Logs**
    - Claude Desktop logs (Help → Show Logs)
-   - Remote Terminal logs (logs/remote_terminal.log)
-
+   
 3. **Test Components**
    - Use standalone mode (start_standalone.ps1)
    - Test SSH manually
@@ -613,10 +620,10 @@ This project is for personal use by Tim. Not currently open source.
 
 ---
 
-**Ready to let Claude manage your servers? Check out [QUICK_START.md](docs/QUICK_START.md) to get started in 5 minutes!**
+**Ready to let Claude manage your servers? Check out [QUICK_START.md](https://github.com/TiM00R/remote-terminal/blob/master/docs/QUICK_START.md) to get started in 5 minutes!**
 
 ---
 
-**Version:** 3.1 (Batch script library, syntax highlighting, enhanced standalone UI)  
-**Last Updated:** December 16, 2024  
+**Version:** 1.2.0 (Auto-config, user data preservation)  
+**Last Updated:** December 23, 2024  
 **Maintainer:** Tim

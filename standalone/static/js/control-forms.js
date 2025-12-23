@@ -13,11 +13,26 @@ function generateForm(tool) {
     
     if (!tool.arguments || tool.arguments.length === 0) {
         // No arguments - just show execute button
-        const btn = document.createElement('button');
-        btn.type = 'submit';
-        btn.className = 'btn-execute';
-        btn.textContent = `▶️ Execute ${tool.name}`;
-        freshForm.appendChild(btn);
+        // Add button container (split row 50/50)
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'button-container';
+        
+        // Execute button (left side)
+        const executeBtn = document.createElement('button');
+        executeBtn.type = 'submit';
+        executeBtn.className = 'btn-execute';
+        executeBtn.textContent = `▶️ Execute ${tool.name}`;
+        buttonContainer.appendChild(executeBtn);
+        
+        // Help button (right side)
+        const helpBtn = document.createElement('button');
+        helpBtn.type = 'button';
+        helpBtn.className = 'btn-help';
+        helpBtn.textContent = `❓ Help`;
+        helpBtn.addEventListener('click', () => showToolHelp(tool));
+        buttonContainer.appendChild(helpBtn);
+        
+        freshForm.appendChild(buttonContainer);
         
         // Add submit handler to fresh form
         freshForm.addEventListener('submit', (e) => {
@@ -49,12 +64,26 @@ function generateForm(tool) {
         freshForm.appendChild(field);
     });
     
-    // Add submit button
-    const btn = document.createElement('button');
-    btn.type = 'submit';
-    btn.className = 'btn-execute';
-    btn.textContent = `▶️ Execute ${tool.name}`;
-    freshForm.appendChild(btn);
+    // Add button container (split row 50/50)
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'button-container';
+    
+    // Execute button (left side)
+    const executeBtn = document.createElement('button');
+    executeBtn.type = 'submit';
+    executeBtn.className = 'btn-execute';
+    executeBtn.textContent = `▶️ Execute ${tool.name}`;
+    buttonContainer.appendChild(executeBtn);
+    
+    // Help button (right side)
+    const helpBtn = document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.className = 'btn-help';
+    helpBtn.textContent = `❓ Help`;
+    helpBtn.addEventListener('click', () => showToolHelp(tool));
+    buttonContainer.appendChild(helpBtn);
+    
+    freshForm.appendChild(buttonContainer);
     
     // Add submit handler to fresh form (only once!)
     freshForm.addEventListener('submit', (e) => {
@@ -189,12 +218,26 @@ async function generateUpdateRecipeForm(form, tool) {
     form.appendChild(succGroup);
     formFields.success_criteria = succInput;
     
-    // Add submit button
-    const btn = document.createElement('button');
-    btn.type = 'submit';
-    btn.className = 'btn-execute';
-    btn.textContent = `▶️ Execute ${tool.name}`;
-    form.appendChild(btn);
+    // Add button container (split row 50/50)
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'button-container';
+    
+    // Execute button (left side)
+    const executeBtn = document.createElement('button');
+    executeBtn.type = 'submit';
+    executeBtn.className = 'btn-execute';
+    executeBtn.textContent = `▶️ Execute ${tool.name}`;
+    buttonContainer.appendChild(executeBtn);
+    
+    // Help button (right side)
+    const helpBtn = document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.className = 'btn-help';
+    helpBtn.textContent = `❓ Help`;
+    helpBtn.addEventListener('click', () => showToolHelp(tool));
+    buttonContainer.appendChild(helpBtn);
+    
+    form.appendChild(buttonContainer);
     
     // Handle recipe selection change - auto-populate fields
     select.addEventListener('change', async () => {
@@ -312,12 +355,33 @@ async function generateDynamicServerSelectForm(form, tool) {
         selectGroup.appendChild(select);
         form.appendChild(selectGroup);
         
-        // Add submit button
-        const btn = document.createElement('button');
-        btn.type = 'submit';
-        btn.className = 'btn-execute';
-        btn.textContent = `▶️ Execute ${tool.name}`;
-        form.appendChild(btn);
+        // Add button container (split row 50/50)
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'button-container';
+        
+        // Execute button (left side)
+        const executeBtn = document.createElement('button');
+        executeBtn.type = 'submit';
+        executeBtn.className = 'btn-execute';
+        executeBtn.textContent = `▶️ Execute ${tool.name}`;
+        buttonContainer.appendChild(executeBtn);
+        
+        // Help button (right side)
+        const helpBtn = document.createElement('button');
+        helpBtn.type = 'button';
+        helpBtn.className = 'btn-help';
+        helpBtn.textContent = `❓ Help`;
+        helpBtn.addEventListener('click', () => showToolHelp(tool));
+        buttonContainer.appendChild(helpBtn);
+        
+        form.appendChild(buttonContainer);
+        
+        // Enable execute button when server is selected
+        select.addEventListener('change', () => {
+            executeBtn.disabled = !select.value;
+        });
+
+
         
         // Add submit handler
         form.addEventListener('submit', (e) => {
@@ -367,7 +431,9 @@ async function generateDynamicServerUpdateForm(form, tool) {
         
         selectGroup.appendChild(select);
         form.appendChild(selectGroup);
-        
+        select.addEventListener('change', () => {
+            executeBtn.disabled = !select.value; // Enable if value selected
+        });
         // Create other fields (initially disabled)
         const fieldConfigs = [
             { name: 'name', label: 'Server Name', type: 'text' },
@@ -403,14 +469,31 @@ async function generateDynamicServerUpdateForm(form, tool) {
             formFields[config.name] = input;
         });
         
-        // Add submit button
-        const btn = document.createElement('button');
-        btn.type = 'submit';
-        btn.className = 'btn-execute';
-        btn.textContent = `▶️ Execute ${tool.name}`;
-        btn.disabled = true; // Disabled until server selected
-        form.appendChild(btn);
         
+        // Add button container (split row 50/50)
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'button-container';
+
+        // Execute button (left side)
+        const executeBtn = document.createElement('button');
+        executeBtn.type = 'submit';
+        executeBtn.className = 'btn-execute';
+        executeBtn.textContent = `▶️ Execute ${tool.name}`;
+        executeBtn.disabled = true; // Disabled until server selected
+        buttonContainer.appendChild(executeBtn);
+
+        // Help button (right side)
+        const helpBtn = document.createElement('button');
+        helpBtn.type = 'button';
+        helpBtn.className = 'btn-help';
+        helpBtn.textContent = `❓ Help`;
+        helpBtn.addEventListener('click', () => showToolHelp(tool));
+        buttonContainer.appendChild(helpBtn);
+
+        form.appendChild(buttonContainer);
+
+
+
         // Handle server selection change
         select.addEventListener('change', () => {
             const selectedOption = select.options[select.selectedIndex];
@@ -418,7 +501,7 @@ async function generateDynamicServerUpdateForm(form, tool) {
             if (!selectedOption.dataset.serverData) {
                 // Placeholder selected - disable fields
                 Object.values(formFields).forEach(input => input.disabled = true);
-                btn.disabled = true;
+                executeBtn.disabled = true;
                 return;
             }
             
@@ -435,7 +518,7 @@ async function generateDynamicServerUpdateForm(form, tool) {
             
             // Enable fields
             Object.values(formFields).forEach(input => input.disabled = false);
-            btn.disabled = false;
+            executeBtn.disabled = false;
         });
         
         // Add submit handler
@@ -1138,7 +1221,7 @@ function serializeForm(form, tool) {
 async function executeTool(tool) {
     const form = document.getElementById('toolForm');
     const executeBtn = form.querySelector('.btn-execute');
-    
+   
     // Validate form before execution
     if (!form.checkValidity()) {
         form.reportValidity();
@@ -1169,7 +1252,7 @@ async function executeTool(tool) {
         });
         
         const result = await response.json();
-        
+        result.tool = tool.name;
         // Display result
         displayResponse(result);
         
@@ -1250,7 +1333,28 @@ function restoreCursorPosition(element, position) {
     selection.addRange(range);
 }
 
+function showToolHelp(tool) {
+    const responseCardTitle = document.getElementById('responseCardTitle');
+    const responseTitle = document.querySelector('.response-title');
+    const responseContent = document.getElementById('responseContent');
+    
+    // Change card title to "MCP Tool Help"
+    if (responseCardTitle) {
+        responseCardTitle.textContent = '📤 MCP Tool Help';
+    }
+    
+    // Change response title to show tool name
+    if (responseTitle) {
+        responseTitle.innerHTML = `MCP Tool <span class="tool-name-highlight">${tool.name}</span> Help`;
+    }
+
+    // Show FULL tool description directly (no wrapper, no nested box)
+    
+    const description = tool.description_full || tool.description || 'No description available';
+    responseContent.innerHTML = '<pre class="help-description">' + description + '</pre>';
+}
 
 // Export for global access
 window.generateForm = generateForm;
 window.executeTool = executeTool;
+window.showToolHelp = showToolHelp;

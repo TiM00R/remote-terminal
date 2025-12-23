@@ -27,7 +27,14 @@
           "required": false,
           "default": "auto",
           "label": "Output Mode",
-          "options": ["auto", "full", "preview", "summary", "minimal", "raw"]
+          "options": [
+            "auto",
+            "full",
+            "preview",
+            "summary",
+            "minimal",
+            "raw"
+          ]
         },
         {
           "name": "conversation_id",
@@ -35,7 +42,8 @@
           "required": false,
           "label": "Conversation ID (optional)"
         }
-      ]
+      ],
+      "description_full": "Execute command on remote Linux machine with smart completion detection.\n                \nBEHAVIOR:\n- Waits for command completion (detects prompt return) OR timeout\n- Returns smart-formatted output based on output_mode\n- Full output stored in buffer\n- Optionally tracks in conversation for rollback support\n\nTIMEOUT:\n- Default: 10 seconds (sufficient for most commands)\n- Override for long operations: timeout=300 (5 min), timeout=1800 (30 min)\n- Maximum: 3600 seconds (1 hour)\n\nOUTPUT_MODE OPTIONS:\n- \"auto\" (default): Smart output based on command type and size\n  * < 100 lines: returns full output\n  * >= 100 lines: returns preview only\n  * Installation commands with errors: returns error contexts\n  * Installation commands without errors: returns last 10 lines\n- \"full\": Always return complete output\n- \"preview\": First 10 + last 10 lines only\n- \"summary\": Metadata only (line count, error flag)\n- \"minimal\": Status + buffer_info only\n- \"raw\": Complete unfiltered output (no truncation, no filtering)\n\nCONVERSATION TRACKING:\n- conversation_id (optional): Associate command with conversation for tracking\n- If provided: command saved with conversation for rollback support\n- If omitted: Behavior depends on user's conversation mode choice:\n  * \"in-conversation\" mode: conversation_id auto-injected\n  * \"no-conversation\" mode: command saved standalone\n  * No mode set: Commands run standalone (default behavior)\n\n⚠️ CONVERSATION MODE WORKFLOW:\n- User's mode choice persists for ALL commands on current server\n- Mode is set when: select_server (user chooses), start_conversation, or user explicitly sets \"no-conversation\"\n- Mode is cleared when: switching servers, new Claude dialog\n- Claude should NEVER ask before each command - the mode handles it automatically\n\nRETURN VALUES:\n- status=\"completed\": Command finished\n- status=\"cancelled\": User interrupted with Ctrl+C\n- status=\"timeout_still_running\": Exceeded timeout, still executing\n- status=\"backgrounded\": Command backgrounded with &"
     },
     {
       "name": "check_command_status",
@@ -54,9 +62,17 @@
           "required": false,
           "default": "auto",
           "label": "Output Mode",
-          "options": ["auto", "full", "preview", "summary", "minimal", "raw"]
+          "options": [
+            "auto",
+            "full",
+            "preview",
+            "summary",
+            "minimal",
+            "raw"
+          ]
         }
-      ]
+      ],
+      "description_full": "Check status of a long-running command.\n\n            OUTPUT_MODE: Same options as execute_command\n            - \"auto\": Smart decision based on output size\n            - \"full\": Get complete output (for completed commands)\n            - \"preview\": Peek at first/last lines\n            - \"summary\": Just metadata (polling frequently)\n            - \"minimal\": Status only\n            - \"raw\": Complete unfiltered output (no truncation, no filtering)\n            \n            Use \"summary\" or \"minimal\" when polling frequently to save tokens.\n            Use \"full\" when command completes and you need results."
     },
     {
       "name": "get_command_output",
@@ -100,7 +116,12 @@
           "type": "select",
           "required": false,
           "label": "Status Filter",
-          "options": ["all", "running", "completed", "killed"]
+          "options": [
+            "all",
+            "running",
+            "completed",
+            "killed"
+          ]
         }
       ]
     },
@@ -126,14 +147,24 @@
           "type": "select",
           "required": false,
           "label": "Status Filter (optional)",
-          "options": ["all", "executed", "cancelled", "timeout", "undone"]
+          "options": [
+            "all",
+            "executed",
+            "cancelled",
+            "timeout",
+            "undone"
+          ]
         },
         {
           "name": "has_errors",
           "type": "select",
           "required": false,
           "label": "Error Filter (optional)",
-          "options": ["all", "true", "false"]
+          "options": [
+            "all",
+            "true",
+            "false"
+          ]
         },
         {
           "name": "after_date",
@@ -172,9 +203,13 @@
           "required": false,
           "default": "newest_first",
           "label": "Sort Order",
-          "options": ["newest_first", "oldest_first"]
+          "options": [
+            "newest_first",
+            "oldest_first"
+          ]
         }
-      ]
+      ],
+      "description_full": "List command execution history from database with flexible filters.\n\nQuery persistent command history across all servers and sessions. Useful for:\n- Reviewing what commands were executed on a server\n- Finding commands from specific dates or time periods\n- Debugging by examining command history\n- Auditing command execution\n- Analyzing errors across multiple sessions\n\nReturns database records with integer IDs, command text, execution status, \ntimestamps, error information, and conversation context when available.\n\nBy default, shows commands from the currently connected server."
     },
     {
       "name": "get_terminal_status",

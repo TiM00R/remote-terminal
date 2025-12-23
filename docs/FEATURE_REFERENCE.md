@@ -27,18 +27,44 @@ Quick reference for all MCP tools and capabilities.
 ### Server Management Tools
 
 #### `list_servers`
-List all configured servers from hosts.yaml
+List all configured servers from hosts.yaml with status markers
 
 **No parameters required**
 
-**Returns:** List of servers with names, hosts, status, tags
+**Returns:** List of servers with:
+- Server names, hosts, ports, users
+- Descriptions and tags
+- **Status markers:**
+  - `[CURRENT]` - Currently connected server
+  - `[DEFAULT]` - Default server (auto-connects when no server specified)
 
-**Example:**
+**Examples:**
 ```
 Claude, show me all my servers
+Which server is set as default?
 ```
-
 ---
+
+#### `set_default_server`
+Set a server as default for automatic connections
+
+**Parameters:**
+- `identifier` (required): Server name or host
+
+**Returns:** Confirmation message
+
+**What it does:**
+- Marks the server with `[DEFAULT]` in `list_servers` output
+- When executing commands without an active connection, Claude automatically connects to the default server
+- Users can see which server is default by running `list_servers`
+
+**Examples:**
+```
+Set production-server as my default
+Make my development server the default
+```
+---
+
 
 #### `select_server`
 Connect to a specific server by name, host, or tag
@@ -75,23 +101,8 @@ Get information about currently connected server
 ```
 Which server am I connected to?
 ```
-
 ---
 
-#### `set_default_server`
-Set a server as default (user will still need to explicitly select it)
-
-**Parameters:**
-- `identifier` (required): Server name or host
-
-**Returns:** Confirmation message
-
-**Example:**
-```
-Set production-server as my default
-```
-
----
 
 #### `add_server`
 Add a new server to configuration

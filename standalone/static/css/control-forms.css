@@ -198,3 +198,195 @@ button[type="submit"]:disabled,
 .server-switch-btn:hover {
     background: #1976D2;
 }
+
+
+/* Button container for Execute and Help buttons (50/50 split) */
+.button-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+
+
+/* Tool help display in response window */
+.tool-help {
+    color: #e0e0e0;
+    line-height: 1.6;
+}
+
+.tool-help h3 {
+    color: #4CAF50;
+    margin-top: 0;
+    font-size: 20px;
+}
+
+.tool-help h4 {
+    color: #2196F3;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.tool-description-help {
+    background: #1a1a1a;
+    padding: 12px;
+    border-left: 3px solid #4CAF50;
+    margin: 15px 0;
+    font-size: 14px;
+}
+
+.parameter-list {
+    list-style: none;
+    padding: 0;
+}
+
+.parameter-list li {
+    background: #1a1a1a;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 3px solid #2196F3;
+    border-radius: 4px;
+}
+
+.parameter-list strong {
+    color: #4CAF50;
+    font-size: 15px;
+}
+
+.param-description {
+    color: #aaa;
+    font-size: 13px;
+}
+
+.param-default {
+    color: #888;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.required-badge {
+    background: #f44336;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.optional-badge {
+    background: #888;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+/* Tool help display - simplified */
+.tool-help {
+    color: #e0e0e0;
+    line-height: 1.6;
+}
+
+.tool-description-box {
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 4px;
+    border-left: 4px solid #2196F3;
+}
+
+.tool-description-box h3 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.description-text {
+    background: #0d1117;
+    padding: 15px;
+    border-radius: 4px;
+    color: #c9d1d9;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    border: 1px solid #30363d;
+}
+
+/* Tool help display - simplified */
+.tool-help {
+    color: #e0e0e0;
+    line-height: 1.6;
+}
+
+.tool-description-box {
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 4px;
+    border-left: 4px solid #2196F3;
+}
+
+.tool-description-box h3 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.description-text {
+    background: #0d1117;
+    padding: 15px;
+    border-radius: 4px;
+    color: #c9d1d9;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    border: 1px solid #30363d;
+}
+
+
+/* Help description - simple monospace text, no nested boxes */
+.help-description {
+    background: #0d1117;
+    padding: 20px;
+    border-radius: 4px;
+    color: #c9d1d9;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    border: 1px solid #30363d;
+}
+
+/* Help button - MUST match Execute button exactly */
+.btn-help {
+    background: #2196F3;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 10px;  /* ADD THIS - same as .btn-execute */
+}
+
+.btn-help:hover {
+    background: #1976D2;
+}
+
+.btn-help:disabled {
+    background: #555;
+    cursor: not-allowed;
+}

@@ -144,10 +144,36 @@ Set a default server in `hosts.yaml`:
 servers:
   - name: my-server
     host: 192.168.1.100
-    default: true
+default_server: my-server
+```
+**Note:** The default server is automatically connected when you execute commands without specifying a server name. Claude will connect to this server on-demand when needed - no manual connection required.
+
+### Viewing Server Status
+
+Use `list_servers` to see all configured servers with status markers:
+```
+Claude, list all my servers
 ```
 
-Claude will NOT auto-connect to this server on startup, you must explicitly select it when needed.
+**Output:**
+```
+Available Servers:
+
+- production-server [CURRENT] [DEFAULT]
+  Host: 192.168.1.100:22
+  User: admin
+  Description: Production server
+  Tags: production, critical
+
+- dev-server
+  Host: 192.168.1.101:22
+  User: developer
+  Tags: development
+```
+
+**Status Markers:**
+- `[CURRENT]` - Currently connected to this server
+- `[DEFAULT]` - This server will auto-connect when running commands
 
 ---
 

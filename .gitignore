@@ -1,13 +1,13 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
-env/
-venv/
-.venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -20,74 +20,66 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Database - SENSITIVE (contains command history, server fingerprints)
-data/*.db
-data/*.db-journal
-data/*.db-wal
-data/*.sqlite
-data/*.sqlite3
-data/backups/
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
 
-# Logs
-logs/
-*.log
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Batch execution logs (may contain sensitive output)
-mcp_batch_logs/
-*.mcp_batch_logs/
-
-# SENSITIVE: Server credentials
-hosts.yaml
-
-# SENSITIVE: Claude Desktop config (may contain paths)
-claude_desktop_config.json
-
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.vs/
 
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Backup files
-*.bak
-*.backup
-
-# Temporary files
-*.tmp
-temp/
-tmp/
-
-# Test files
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Virtual environments
-[Ee]nv/
-[Vv]env/
-ENV/
-env.bak/
-venv.bak/
-
-# MCP Registry tokens (keep private)
-.mcpregistry_github_token
-.mcpregistry_registry_token
-
-# Demo videos - only ignore compressed version (original demo.mp4 is tracked)
-docs/demo-compressed.mp4
-data/
+# Project specific
+*.log
 data/*.db
+data/*.db-journal
+*.pyc
+
+# Local test files
+test_*.py
+
+.mcpregistry_*
+
+# Root config files (development copies, use config/ folder versions)
+config.yaml
+hosts.yaml

@@ -29,10 +29,33 @@ class DatabaseManager:
         """
         
         if db_path is None:
-            # Default to data folder
+            # Current working directory
+            cwd = Path.cwd()
+            cwd_data_folder = cwd / 'data'
+            cwd_data_db = cwd_data_folder / 'remote_terminal.db'
+            
+            # Project root (for GitHub users)
             project_root = Path(__file__).parent.parent
-            db_path = str(project_root / 'data' / 'remote_terminal.db')
-                
+            project_data_folder = project_root / 'data'
+            project_data_db = project_data_folder / 'remote_terminal.db'
+            
+            if cwd_data_db.exists():
+                # Use existing database in CWD/data
+                db_path = str(cwd_data_db)
+            elif project_data_db.exists():
+                # Use existing database in project/data folder (GitHub)
+                db_path = str(project_data_db)
+            elif project_data_folder.exists():
+                # Project data folder exists (GitHub setup)
+                db_path = str(project_data_db)
+            else:
+                # Create data folder in CWD (pip setup)
+                cwd_data_folder.mkdir(exist_ok=True)
+                db_path = str(cwd_data_db)
+            
+            logger.info(f"Database path: {db_path}")
+            
+                       
         self.db_path = db_path
         self.conn: Optional[sqlite3.Connection] = None
         self.connected = False
@@ -204,6 +227,7 @@ class DatabaseManager:
                 )
             """)
             
+            
             # Batch scripts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS batch_scripts (
@@ -211,12 +235,14 @@ class DatabaseManager:
                     name TEXT UNIQUE NOT NULL,
                     description TEXT,
                     script_content TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
                     created_by TEXT DEFAULT 'claude',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     times_used INTEGER DEFAULT 0,
                     last_used_at TIMESTAMP
                 )
             """)
+            
             
             # Add index for hash lookups
             cursor.execute("""

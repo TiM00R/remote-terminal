@@ -22,7 +22,13 @@ async def get_tools(**kwargs) -> list[types.Tool]:
     return [
         types.Tool(
             name="list_servers",
-            description="List all configured servers with their details",
+            description="""List all configured servers with their details.
+Shows server status markers:
+- [CURRENT]: Currently connected server
+- [DEFAULT]: Default server (auto-connects when no server specified)
+
+Returns: Server names, hosts, ports, users, descriptions, tags, and status markers.
+""",
             inputSchema={
                 "type": "object",
                 "properties": {}
@@ -183,7 +189,14 @@ NEVER execute commands without first getting user's choice when open_conversatio
         ),
         types.Tool(
             name="set_default_server",
-            description="Set default server for auto-connect on startup",
+            description="""Set default server (shown in list_servers with [DEFAULT] marker).
+            
+The default server is the preferred server for operations that don't specify a server.
+When you execute commands without an active connection, Claude will automatically
+connect to the default server.
+
+Note: Use list_servers to see which server is currently marked as default.
+""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -231,7 +244,7 @@ async def handle_call(name: str, arguments: dict, hosts_manager, ssh_manager,
     return None
 
 async def _list_servers(hosts_manager) -> list[types.TextContent]:
-    """List all configured servers"""
+    """List all configured servers with [CURRENT] and [DEFAULT] markers"""
     servers = hosts_manager.list_servers()
     
     if not servers:
@@ -240,10 +253,14 @@ async def _list_servers(hosts_manager) -> list[types.TextContent]:
             text="No servers configured. Use add_server to add one."
         )]
     
+    # Get default server name
+    default_server_name = hosts_manager.default_server
+    
     result = ["Available Servers:\n"]
     for srv in servers:
         current_marker = " [CURRENT]" if srv['is_current'] else ""
-        result.append(f"• {srv['name']}{current_marker}")
+        default_marker = " [DEFAULT]" if srv['name'] == default_server_name else ""
+        result.append(f"• {srv['name']}{current_marker}{default_marker}")
         result.append(f"  Host: {srv['host']}:{srv['port']}")
         result.append(f"  User: {srv['user']}")
         if srv['description']:

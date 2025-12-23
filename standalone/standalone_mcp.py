@@ -125,7 +125,18 @@ async def connection_info_endpoint(request):
     try:
         if g_hosts_manager:
             current_server = g_hosts_manager.get_current()
-            if current_server and g_shared_state and g_shared_state.is_connected():
+            
+            # Check actual SSH connection status (not just if manager exists)
+            is_actually_connected = False
+            if g_shared_state and g_shared_state.ssh_manager:
+                # Check if SSH channel is actually active
+                is_actually_connected = (
+                    g_shared_state.ssh_manager.client is not None and 
+                    g_shared_state.ssh_manager.client.get_transport() is not None and
+                    g_shared_state.ssh_manager.client.get_transport().is_active()
+                )
+            
+            if current_server and is_actually_connected:
                 # Build connection string
                 connection = f"{current_server.user}@{current_server.host} ({current_server.name})"
                 
@@ -147,25 +158,29 @@ async def connection_info_endpoint(request):
                 return JSONResponse({
                     'connection': connection,
                     'machine_id': machine_id,
-                    'hostname': hostname
+                    'hostname': hostname,
+                    'connected': True
                 })
             elif current_server:
                 return JSONResponse({
                     'connection': f"{current_server.name} (disconnected)",
                     'machine_id': None,
-                    'hostname': None
+                    'hostname': None,
+                    'connected': False
                 })
             else:
                 return JSONResponse({
                     'connection': "No server selected",
                     'machine_id': None,
-                    'hostname': None
+                    'hostname': None,
+                    'connected': False
                 })
         else:
             return JSONResponse({
                 'connection': "Not configured",
                 'machine_id': None,
-                'hostname': None
+                'hostname': None,
+                'connected': False
             })
         
     except Exception as e:
@@ -173,8 +188,10 @@ async def connection_info_endpoint(request):
         return JSONResponse({
             'connection': 'Error',
             'machine_id': None,
-            'hostname': None
+            'hostname': None,
+            'connected': False
         })
+
 
 
 async def list_servers_endpoint(request):
@@ -294,9 +311,19 @@ def main():
     print("=" * 60)
     print()
     
+    # Initialize config files (copy defaults on first run)
+    sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+    from config_init import ensure_config_files
     
-    # Load configuration
-    config_path = Path(__file__).parent.parent / 'config.yaml'
+    try:
+        config_path, hosts_path = ensure_config_files()
+        logger.info(f"Config file: {config_path}")
+        logger.info(f"Hosts file: {hosts_path}")
+    except Exception as e:
+        logger.error(f"Error initializing config files: {e}", exc_info=True)
+        print(f"ERROR: Cannot initialize config files: {e}")
+        sys.exit(1)
+    
     g_config = Config(str(config_path))
 
     # Use standalone ports from config (allows both MCP and standalone to run simultaneously)
@@ -316,57 +343,84 @@ def main():
     
     logger.info("Database connected")
     
-    # Load hosts manager
-    hosts_path = Path(__file__).parent.parent / 'hosts.yaml'
     g_hosts_manager = HostsManager(str(hosts_path))
     logger.info(f"Loaded {len(g_hosts_manager.servers)} server(s)")
     
-    # Get default server
+    
+    # Get default server (may not exist if configured incorrectly)
     default_server = g_hosts_manager.get_default()
     if not default_server and len(g_hosts_manager.servers) > 0:
+        # No default set, use first server
         default_server = g_hosts_manager.servers[0]
     
-    if not default_server:
+    # Check if we have any servers configured
+    if len(g_hosts_manager.servers) == 0:
         logger.error("No servers configured")
         print("ERROR: No servers in hosts.yaml")
         sys.exit(1)
     
-    # Create SSH manager
-    ssh_manager = SSHManager(
-        host=default_server.host,
-        user=default_server.user,
-        password=default_server.password,
-        port=default_server.port,
-        keepalive_interval=g_config.connection.keepalive_interval,
-        reconnect_attempts=g_config.connection.reconnect_attempts,
-        connection_timeout=g_config.connection.connection_timeout
-    )
-    
-    # Create shared state
-    g_shared_state = SharedTerminalState()
-    g_shared_state.initialize(g_config)
-    
-    # CRITICAL: Replace ssh_manager AND set output callback
-    g_shared_state.ssh_manager = ssh_manager
-    ssh_manager.set_output_callback(g_shared_state._handle_output)
-    
-    # Set database
-    g_shared_state.database = g_db_manager
-    
-    # Connect to SSH FIRST
-    print(f"Connecting to {default_server.name} ({default_server.user}@{default_server.host})...")
-    success = ssh_manager.connect()
-    
-    if not success:
-        logger.error("SSH connection failed")
-        print("ERROR: Cannot connect via SSH")
-        sys.exit(1)
-    
-    logger.info("SSH connected")
-    print(f"Connected to {default_server.name}")
-    
-    # Update prompt detector
-    g_shared_state.update_credentials(default_server.user, default_server.host)
+    # Try to connect to default server (if one exists)
+    connection_successful = False
+    if default_server:
+        # Create SSH manager
+        ssh_manager = SSHManager(
+            host=default_server.host,
+            user=default_server.user,
+            password=default_server.password,
+            port=default_server.port,
+            keepalive_interval=g_config.connection.keepalive_interval,
+            reconnect_attempts=g_config.connection.reconnect_attempts,
+            connection_timeout=g_config.connection.connection_timeout
+        )
+        
+        # Create shared state
+        g_shared_state = SharedTerminalState()
+        g_shared_state.initialize(g_config)
+        
+        # CRITICAL: Replace ssh_manager AND set output callback
+        g_shared_state.ssh_manager = ssh_manager
+        ssh_manager.set_output_callback(g_shared_state._handle_output)
+        
+        # Set database
+        g_shared_state.database = g_db_manager
+        
+        # Try to connect to SSH
+        print(f"Connecting to {default_server.name} ({default_server.user}@{default_server.host})...")
+        success = ssh_manager.connect()
+        
+        if success:
+            logger.info("SSH connected")
+            print(f"Connected to {default_server.name}")
+            connection_successful = True
+            
+            # Update prompt detector
+            g_shared_state.update_credentials(default_server.user, default_server.host)
+        else:
+            logger.warning(f"Failed to connect to default server: {default_server.name}")
+            print(f"WARNING: Could not connect to {default_server.name}")
+            print("You can connect to another server using the control panel.")
+    else:
+        # No default server - create minimal shared state without connection
+        logger.info("No default server configured - starting without connection")
+        print("No default server configured.")
+        print("Use the control panel to select and connect to a server.")
+        
+        # Create dummy SSH manager (will be replaced when user selects server)
+        ssh_manager = SSHManager(
+            host="localhost",
+            user="dummy",
+            password="dummy",
+            port=22,
+            keepalive_interval=g_config.connection.keepalive_interval,
+            reconnect_attempts=g_config.connection.reconnect_attempts,
+            connection_timeout=g_config.connection.connection_timeout
+        )
+        
+        # Create shared state
+        g_shared_state = SharedTerminalState()
+        g_shared_state.initialize(g_config)
+        g_shared_state.ssh_manager = ssh_manager
+        g_shared_state.database = g_db_manager
     
     # Override web terminal port for standalone mode (BEFORE creating WebTerminalServer)
     standalone_config = g_config._raw_config.get('standalone', {})
@@ -381,41 +435,44 @@ def main():
         hosts_manager=g_hosts_manager
     )
     
-    # Fetch machine_id
-    print("Fetching machine ID from server...")
-    async def setup_machine_id():
-        from tools.tools_hosts import _select_server
-        try:
-            result = await _select_server(
-                shared_state=g_shared_state,
-                hosts_manager=g_hosts_manager,
-                database=g_db_manager,
-                web_server=g_web_terminal,
-                identifier=default_server.name,
-                force_identity_check=False
-            )
-            
-            result_text = result[0].text
-            result_json = json.loads(result_text)
-            
-            if result_json.get('connected'):
-                machine_id = result_json.get('machine_id', 'unknown')
-                print(f"Machine ID registered: {machine_id}")
-                logger.info(f"Server setup complete")
+    # Fetch machine_id only if connected
+    if connection_successful:
+        print("Fetching machine ID from server...")
+        async def setup_machine_id():
+            from tools.tools_hosts import _select_server
+            try:
+                result = await _select_server(
+                    shared_state=g_shared_state,
+                    hosts_manager=g_hosts_manager,
+                    database=g_db_manager,
+                    web_server=g_web_terminal,
+                    identifier=default_server.name,
+                    force_identity_check=False
+                )
                 
-                # Just send a newline to get fresh prompt for terminal UI
-                time.sleep(0.5)
-                ssh_manager.send_input('\n')
-                time.sleep(0.5)
-            else:
-                print("WARNING: Machine ID not available")
-                logger.warning("Machine ID fetch failed")
+                result_text = result[0].text
+                result_json = json.loads(result_text)
                 
-        except Exception as e:
-            logger.error(f"Error in select_server: {e}", exc_info=True)
-            print(f"WARNING: Could not fetch machine ID: {e}")
+                if result_json.get('connected'):
+                    machine_id = result_json.get('machine_id', 'unknown')
+                    print(f"Machine ID registered: {machine_id}")
+                    logger.info(f"Server setup complete")
+                    
+                    # Just send a newline to get fresh prompt for terminal UI
+                    time.sleep(0.5)
+                    ssh_manager.send_input('\n')
+                    time.sleep(0.5)
+                else:
+                    print("WARNING: Machine ID not available")
+                    logger.warning("Machine ID fetch failed")
+                    
+            except Exception as e:
+                logger.error(f"Error in select_server: {e}", exc_info=True)
+                print(f"WARNING: Could not fetch machine ID: {e}")
+        
+        asyncio.run(setup_machine_id())
     
-    asyncio.run(setup_machine_id())
+    
     
     # Start web terminal in background
     print(f"Starting web terminal on port {terminal_port}...")

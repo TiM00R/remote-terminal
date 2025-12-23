@@ -138,4 +138,8 @@
 }
 
 
-
+.tool-name-highlight {
+    color: #2196F3 !important;  /* Blue instead of green */
+    font-weight: bold !important;
+    font-size: 1.2em !important;  /* Slightly larger */
+}

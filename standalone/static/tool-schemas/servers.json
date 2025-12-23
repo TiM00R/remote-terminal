@@ -4,7 +4,8 @@
     {
       "name": "list_servers",
       "description": "Get all configured servers from hosts.yaml",
-      "arguments": []
+      "arguments": [],
+      "description_full": "List all configured servers with their details.\nShows server status markers:\n- [CURRENT]: Currently connected server\n- [DEFAULT]: Default server (auto-connects when no server specified)\n\nReturns: Server names, hosts, ports, users, descriptions, tags, and status markers."
     },
     {
       "name": "get_current_server",
@@ -158,7 +159,8 @@
           "label": "Select Default Server",
           "placeholder": "Choose a server..."
         }
-      ]
+      ],
+      "description_full": "Set default server (shown in list_servers with [DEFAULT] marker).\n            \nThe default server is the preferred server for operations that don't specify a server.\nWhen you execute commands without an active connection, Claude will automatically\nconnect to the default server.\n\nNote: Use list_servers to see which server is currently marked as default."
     }
   ]
 }

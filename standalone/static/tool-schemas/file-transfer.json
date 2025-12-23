@@ -79,6 +79,7 @@
     {
       "name": "upload_directory",
       "description": "Upload entire directory with smart compression",
+      "description_full":"Smart directory upload with automatic compression and progress tracking. Automatically decides whether to use compression and background mode based on transfer characteristics.",
       "arguments": [
         {
           "name": "local_path",
@@ -136,6 +137,7 @@
     {
       "name": "download_directory",
       "description": "Download entire directory with smart compression",
+      "description_full": "Smart directory download with automatic compression and progress tracking. Automatically decides whether to use compression and background mode based on transfer characteristics.",
       "arguments": [
         {
           "name": "remote_path",

@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remote-terminal-mcp"
+version = "1.2.0"
+description = "Full SSH terminal for Linux servers with AI/user control and dual-stream visibility"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "Tim", email = "tim00r@github.com"}
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "ssh",
+    "remote-terminal",
+    "linux",
+    "server-management",
+    "automation",
+    "devops",
+    "claude",
+    "ai"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Terminals",
+]
+
+dependencies = [
+    "nicegui>=1.4.0",
+    "paramiko>=3.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "aiofiles>=23.0.0",
+    "python-json-logger>=2.0.0",
+    "mcp>=1.0.0",
+    "starlette>=0.27.0",
+    "uvicorn>=0.23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/TiM00R/remote-terminal"
+Repository = "https://github.com/TiM00R/remote-terminal"
+Documentation = "https://github.com/TiM00R/remote-terminal/tree/master/docs"
+
+
+[project.scripts]
+remote-terminal-mcp = "src.__main__:main"
+remote-terminal-standalone = "standalone.standalone_mcp:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "standalone*", "config"]
+
+[tool.setuptools.package-data]
+src = ["*.json", "static/**/*"]
+standalone = ["*.html", "static/**/*"]
+config = ["*.yaml",  "*.yaml.example"]

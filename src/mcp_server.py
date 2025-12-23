@@ -58,12 +58,21 @@ class RemoteTerminalMCP:
         # Get the singleton shared state instance
         self._shared_state = _shared_state
         
-        # Load config from project root
-        config_path = PROJECT_ROOT / "config.yaml"
+        # Initialize config files (copy defaults on first run)
+        from config_init import ensure_config_files
+        
+        try:
+            config_path, hosts_path = ensure_config_files()
+            logger.info(f"Config file: {config_path}")
+            logger.info(f"Hosts file: {hosts_path}")
+        except Exception as e:
+            logger.error(f"Error initializing config files: {e}", exc_info=True)
+            raise
+        
+        # Load configuration
         self.config = Config(str(config_path))
         
         # Load hosts manager
-        hosts_path = PROJECT_ROOT / "hosts.yaml"
         self.hosts_manager = HostsManager(str(hosts_path))
         
         # Initialize shared state (includes database initialization)
@@ -159,32 +168,6 @@ class RemoteTerminalMCP:
         # Just log that we're ready
         logger.info("Remote Terminal MCP initialized. Ready to handle tool calls.")
         
-        # Check for default server
-        # default_server = self.hosts_manager.get_default()
-    
-        # if default_server:
-        #     logger.info(f"Auto-connecting to default server: {default_server.name}")
-            
-        #     # Import the select_server handler
-        #     from tools.tools_hosts import _select_server
-            
-        #     # Use existing select_server logic which handles machine_id fetching
-        #     try:
-        #         result = await _select_server(
-        #             shared_state=self._shared_state,
-        #             hosts_manager=self.hosts_manager,
-        #             database=self._shared_state.database,
-        #             web_server=self.web_server,
-        #             identifier=default_server.name,
-        #             force_identity_check=False  # Use cache if available
-        #         )
-                
-        #         self.connected = True
-        #         logger.info(f"Auto-connected to {default_server.name}")
-        #     except Exception as e:
-        #         logger.error(f"Failed to auto-connect: {e}")                
-        # else:
-        #     logger.info("No default server configured. Use select_server to connect.")
     
     async def cleanup(self):
         """Cleanup on shutdown"""

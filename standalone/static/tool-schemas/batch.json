@@ -30,7 +30,12 @@
           "required": false,
           "default": "recently_used",
           "label": "Sort By",
-          "options": ["most_used", "recently_used", "newest", "oldest"]
+          "options": [
+            "most_used",
+            "recently_used",
+            "newest",
+            "oldest"
+          ]
         },
         {
           "name": "search",
@@ -39,7 +44,8 @@
           "label": "Search",
           "placeholder": "Search in name/description (optional)"
         }
-      ]
+      ],
+      "description_full": "List batch scripts saved in database.\n\nBrowse saved scripts with filtering and sorting options.\nUse this to find scripts to reuse or manage."
     },
     {
       "name": "get_batch_script",
@@ -51,7 +57,8 @@
           "required": true,
           "label": "Script ID"
         }
-      ]
+      ],
+      "description_full": "Get batch script details and content by ID.\n\nReturns complete script information including source code.\nUse this to view a script before executing or editing it."
     },
     {
       "name": "save_batch_script",
@@ -79,7 +86,8 @@
           "label": "Description",
           "placeholder": "What this script does"
         }
-      ]
+      ],
+      "description_full": "Save a batch script to database (without executing).\n\nSaves script for later reuse. Automatically deduplicates based on content hash.\nDoes NOT execute the script - use execute_script_content_by_id to run it."
     },
     {
       "name": "execute_script_content_by_id",
@@ -106,7 +114,10 @@
           "required": false,
           "default": "summary",
           "label": "Output Mode",
-          "options": ["summary", "full"]
+          "options": [
+            "summary",
+            "full"
+          ]
         },
         {
           "name": "conversation_id",
@@ -115,7 +126,8 @@
           "label": "Conversation ID",
           "placeholder": "Optional conversation link"
         }
-      ]
+      ],
+      "description_full": "Execute a saved batch script by ID.\n\nLoads script from database and executes it on the remote server.\nIncrements usage counter and tracks execution in batch_executions table."
     },
     {
       "name": "delete_batch_script",
@@ -134,7 +146,8 @@
           "default": false,
           "label": "Confirm deletion (check to proceed)"
         }
-      ]
+      ],
+      "description_full": "Delete a batch script from database (requires confirmation).\n\nFirst call without confirm shows script details and warning.\nSecond call with confirm=true actually deletes.\nThis is a hard delete - execution history is preserved but script content is lost."
     },
     {
       "name": "execute_script_content",
@@ -170,7 +183,10 @@
           "required": false,
           "default": "summary",
           "label": "Output Mode",
-          "options": ["summary", "full"]
+          "options": [
+            "summary",
+            "full"
+          ]
         },
         {
           "name": "conversation_id",
@@ -179,7 +195,8 @@
           "label": "Conversation ID",
           "placeholder": "Optional conversation link"
         }
-      ]
+      ],
+      "description_full": "Execute multi-command batch script on remote Linux server.\n\nOUTPUT_MODE_GUIDANCE: Use output_mode='full' for diagnostic commands with expected concise output. Full output returns directly in the response for immediate analysis.\n\nLOG_FILE_LOCATION: Script output is automatically saved to the local user's home directory:\n- %USERPROFILE%\\\\mcp_batch_logs\\\\batch_output_[timestamp].log\n\nUse Aspen tools (apsen-tool_v2:read_file) with project root ~\\\\mcp_batch_logs to access saved log files for post-execution analysis—for example, extracting specific error context, parsing structured data, debugging by reading lines around errors, or processing log entries for analysis. Do not use bash/Linux tools to access local log files; use Aspen tools for local file system access.\n\nWorkflow:\n1. Pre-authenticate sudo if script contains sudo commands\n2. Upload script to remote /tmp directory\n3. Set executable permissions\n4. Execute script with output logging (AI blocks here)\n5. Download log file to local machine\n6. Parse output and return structured results\n\nUser sees live progress in terminal. AI is blocked until completion.\nParsing happens AFTER execution completes.\n\nOUTPUT_MODE:\n- \"summary\" (default): Steps, errors, execution time + preview (first/last 10 lines)\n  Token efficient. Log file saved locally for later analysis if needed.\n- \"full\": Includes complete output in response (for diagnostics where AI needs to analyze output)\n  Uses more tokens but gives AI all data in one round trip.\n\nExample script format:\n#!/bin/bash\necho \"=== [STEP 1/3] Check interfaces ===\"\nip link show\necho \"[STEP_1_COMPLETE]\"\n\necho \"=== [STEP 2/3] Check routing ===\"\nip route show\necho \"[STEP_2_COMPLETE]\"\n\necho \"=== [STEP 3/3] Check DNS ===\"\ncat /etc/resolv.conf\necho \"[STEP_3_COMPLETE]\"\necho \"[ALL_DIAGNOSTICS_COMPLETE]\""
     },
     {
       "name": "build_script_from_commands",
@@ -212,7 +229,8 @@
           "default": "Diagnostics",
           "label": "Overall Description"
         }
-      ]
+      ],
+      "description_full": "Helper tool to create a batch (shell) script from command list.\n\nUseful for AI to quickly build properly formatted scripts.\n\nExample:\ncommands = [\n    {\"description\": \"Network interfaces\", \"command\": \"ip link show\"},\n    {\"description\": \"Routing table\", \"command\": \"ip route show\"},\n    {\"description\": \"DNS config\", \"command\": \"cat /etc/resolv.conf\"}\n]"
     }
   ]
 }

@@ -23,59 +23,28 @@ Remote Terminal lets Claude (the AI) execute commands on your remote Linux serve
 
 ## 5-Minute Setup
 
-### Step 1: Download and Extract
-
-1. Extract the `remote_terminal` folder to: `D:\Projects\remote_terminal`
-2. Or choose your own location (adjust paths below accordingly)
-
-### Step 2: Configure Your Server
-
-Edit `D:\Projects\remote_terminal\hosts.yaml`:
-
-```yaml
-servers:
-  - name: my-server
-    host: 192.168.1.100
-    user: your_username
-    password: your_password
-    port: 22
-    description: My Linux server
-    default: true
-    tags: production
-```
-
-**Security Note:** For production use, consider SSH keys instead of passwords.
-
-### Step 3: Install Dependencies
-
-Open PowerShell and run:
+### Step 1: Create Installation Directory
 
 ```powershell
-cd D:\Projects\remote_terminal
+# Choose a location (example: C:\RemoteTerminal)
+mkdir C:\RemoteTerminal
+cd C:\RemoteTerminal
+```
 
+### Step 2: Install Package
+
+```powershell
 # Create virtual environment
-python -m venv .venv
+python -m venv remote-terminal-env
 
 # Activate it
-.\.venv\Scripts\Activate.ps1
+remote-terminal-env\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Install MCP support
-pip install mcp
+# Install package
+pip install remote-terminal-mcp
 ```
 
-### Step 4: Test Connection
-
-```powershell
-# Still in PowerShell with .venv activated
-python -c "from src.hosts_manager import HostsManager; from src.config import Config; from src.ssh_manager import SSHManager; hm = HostsManager('hosts.yaml'); s = hm.get_default(); mgr = SSHManager(s.host, s.user, s.password); print('Connected!' if mgr.connect() else 'Failed')"
-```
-
-You should see: `Connected!`
-
-### Step 5: Configure Claude Desktop
+### Step 3: Configure Claude Desktop
 
 1. Find your Claude config file:
    - Location: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -86,41 +55,69 @@ You should see: `Connected!`
    notepad %APPDATA%\Claude\claude_desktop_config.json
    ```
 
-3. Add this configuration (adjust paths if you installed elsewhere):
+3. Add this configuration:
 
 ```json
 {
   "mcpServers": {
     "remote-terminal": {
-      "command": "D:\\Projects\\remote_terminal\\.venv\\Scripts\\python.exe",
-      "args": [
-        "D:\\Projects\\remote_terminal\\src\\mcp_server.py"
-      ],
+      "command": "C:\\RemoteTerminal\\remote-terminal-env\\Scripts\\remote-terminal-mcp.exe",
       "env": {
-        "PYTHONPATH": "D:\\Projects\\remote_terminal\\src"
+        "REMOTE_TERMINAL_ROOT": "C:\\RemoteTerminal"
       }
     }
   }
 }
 ```
 
+**Important:** Replace `C:\RemoteTerminal` with your actual installation path from Step 1.
+
 4. Save and close the file
 
-### Step 6: Restart Claude Desktop
+### Step 4: Restart Claude Desktop
 
 1. Completely exit Claude Desktop (right-click system tray → Exit)
-2. Restart Claude Desktop
+2. Restart Claude Desktop (use Task Manager to kill the process)
 3. Look for MCP connection indicator (small icon showing connected servers)
 
-### Step 7: Test It!
+### Step 5: First Run - Auto Setup
+
+On first use, configuration files will automatically copy to `C:\RemoteTerminal`:
+- `config.yaml` - Default settings (auto-created)
+- `hosts.yaml` - Server list (auto-created from template)
+
+### Step 6: Configure Your Server
+
+Edit `C:\RemoteTerminal\hosts.yaml`:
+
+```yaml
+servers:
+  - name: my-server
+    host: 192.168.1.100
+    user: your_username
+    password: your_password
+    port: 22
+    description: My Linux server
+    tags: production
+# Optional: Set default server for auto-connect
+default_server: my-server
+```
+
+**Security Note:** For production use, consider SSH keys instead of passwords.
+
+### Step 7: Restart Claude Again
+
+Restart Claude Desktop to load your server configuration.
+
+### Step 8: Test It!
 
 Open Claude and try:
 
 ```
-Claude, can you check if you're connected to my remote terminal?
+Claude, list my configured servers
 ```
 
-Claude should confirm it can see the `remote-terminal` MCP server.
+Claude should show your server from `hosts.yaml`.
 
 Then try:
 
@@ -200,13 +197,24 @@ This means:
 - Claude works efficiently without token waste
 - Best of both worlds!
 
+## Configuration Files Location
+
+Your configuration files are stored in `C:\RemoteTerminal` (or wherever you set `REMOTE_TERMINAL_ROOT`):
+
+- `config.yaml` - Global settings (timeouts, filtering, ports)
+- `hosts.yaml` - Your server configurations
+- `data/remote_terminal.db` - Command history database
+
+**Important:** These files are preserved when you upgrade the package via `pip install --upgrade remote-terminal-mcp`.
+
 ## Next Steps
 
 Now that you're running, explore the other guides:
 
+- **INSTALLATION.md** - Detailed installation instructions
 - **USER_GUIDE.md** - Complete feature walkthrough
 - **TROUBLESHOOTING.md** - Common problems and solutions
-- **ADVANCED_FEATURES.md** - Conversations, recipes, batch execution
+- **FEATURE_REFERENCE.md** - All MCP tools reference
 
 ## Quick Reference
 
@@ -232,6 +240,20 @@ Restart the nginx service and verify it's running
 Show me any errors in the last hour of system logs
 ```
 
+## Optional: Standalone Mode
+
+You can also run Remote Terminal's web interface directly (without Claude):
+
+```powershell
+cd C:\RemoteTerminal
+remote-terminal-env\Scripts\activate
+remote-terminal-standalone
+```
+
+Access at:
+- Control Panel: http://localhost:8081
+- Terminal: http://localhost:8082
+
 ## Need Help?
 
 **Connection Issues?**
@@ -241,16 +263,21 @@ Show me any errors in the last hour of system logs
 
 **Web Terminal Not Opening?**
 - Manually open: `http://localhost:8080`
-- Check if port 8080 is in use: `netstat -ano | findstr :8080`
+- Check if port 8080 is in use
 
 **Claude Not Responding?**
 - Check Claude Desktop logs (Help → Show Logs)
 - Verify MCP server appears in Claude settings
 - Restart Claude Desktop completely
 
+**Config Files Not Created?**
+- Check `REMOTE_TERMINAL_ROOT` is set correctly in Claude Desktop config
+- Verify the directory exists: `C:\RemoteTerminal`
+- Check Claude Desktop logs for errors
+
 ---
 
 **You're all set!** Start asking Claude to help with your Linux server management.
 
-**Version:** 3.0 (SQLite-based, multi-server support)  
-**Last Updated:** December 2024
+**Version:** 1.1.3 (Auto-config, user data preservation)  
+**Last Updated:** December 20, 2024

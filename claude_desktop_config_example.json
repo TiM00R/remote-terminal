@@ -1,13 +1,11 @@
 {
-  "mcpServers": {
-    "remote-terminal": {
-      "command": "D:\\Your-Proj\\remote_terminal\\.venv\\Scripts\\python.exe",
-        "args": [
-            "D:\\Your-Proj\\remote_terminal\\src\\mcp_server.py"
-        ],
-        "env": {
-            "PYTHONPATH": "D:\\Your-Proj\\remote_terminal\\src"
+    "mcpServers": {
+        "remote-terminal": {
+            "command": "D:\\test_local_install\\test_env\\Scripts\\remote-terminal-mcp.exe",
+            "env": {
+                "REMOTE_TERMINAL_ROOT": "D:\\test_local_install"
+            }
+
         }
     }
-  }
 }

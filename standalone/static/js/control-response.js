@@ -7,11 +7,26 @@ function showLoading() {
 
 function displayResponse(result) {
     const content = document.getElementById('responseContent');
+    const responseCardTitle = document.getElementById('responseCardTitle');
+    const responseTitle = document.querySelector('.response-title');
+    
+    // Reset card title back to "MCP Tool Response"
+    if (responseCardTitle) {
+        responseCardTitle.textContent = '📤 MCP Tool Response';
+    }
+    
+    // Reset response title with tool name
+    if (responseTitle && result.tool) {
+       responseTitle.innerHTML = `MCP Tool <span class="tool-name-highlight">${result.tool}</span> Response (What AI Would See)`;
+    } else if (responseTitle) {
+        responseTitle.textContent = 'MCP Tool Response (What AI Would See)';
+    }
     
     // Format JSON with syntax highlighting and escape sequence handling
     const formatted = formatJSON(result);
     content.innerHTML = formatted;
 }
+
 
 function displayError(error) {
     const content = document.getElementById('responseContent');

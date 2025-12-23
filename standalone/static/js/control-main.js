@@ -399,6 +399,7 @@ async function loadServers() {
     }
 }
 
+
 // Check connection status
 async function checkConnection() {
     try {
@@ -418,9 +419,9 @@ async function checkConnection() {
         
         document.getElementById('serverInfo').innerHTML = infoHtml;
         
-        // Update status badge
+        // Update status badge using explicit 'connected' field from backend
         const statusEl = document.getElementById('connectionStatus');
-        if (data.connection && !data.connection.includes('Not connected') && !data.connection.includes('disconnected')) {
+        if (data.connected === true) {
             statusEl.textContent = 'Connected';
             statusEl.className = 'status connected';
         } else {
@@ -429,8 +430,13 @@ async function checkConnection() {
         }
     } catch (error) {
         console.error('Connection check failed:', error);
+        // Set disconnected on error
+        const statusEl = document.getElementById('connectionStatus');
+        statusEl.textContent = 'Disconnected';
+        statusEl.className = 'status disconnected';
     }
 }
+
 
 // Switch server
 async function switchServer() {
