@@ -39,10 +39,10 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 # Add project root to path so imports work
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from config import Config
+from config.config_loader import Config
 from hosts_manager import HostsManager
 from shared_state import _shared_state
-from web_terminal import WebTerminalServer
+from web.web_terminal import WebTerminalServer
 
 # Import tool modules
 from tools import TOOL_MODULES
@@ -59,7 +59,7 @@ class RemoteTerminalMCP:
         self._shared_state = _shared_state
         
         # Initialize config files (copy defaults on first run)
-        from config_init import ensure_config_files
+        from config.config_init import ensure_config_files
         
         try:
             config_path, hosts_path = ensure_config_files()

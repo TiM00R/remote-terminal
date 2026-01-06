@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for file in d:RodsProjremote_terminal/check_schema.py d:RodsProjremote_terminal/export_recipe.py d:RodsProjremote_terminal/src/batch_executor.py d:RodsProjremote_terminal/src/batch_helpers.py d:RodsProjremote_terminal/src/batch_parser.py d:RodsProjremote_terminal/src/command_state.py d:RodsProjremote_terminal/src/config.py d:RodsProjremote_terminal/src/config_init.py d:RodsProjremote_terminal/src/database_batch.py d:RodsProjremote_terminal/src/database_manager.py d:RodsProjremote_terminal/src/error_check_helper.py d:RodsProjremote_terminal/src/hosts_manager.py d:RodsProjremote_terminal/src/mcp_server.py d:RodsProjremote_terminal/src/output_buffer.py d:RodsProjremote_terminal/src/output_filter.py d:RodsProjremote_terminal/src/output_formatter.py d:RodsProjremote_terminal/src/prompt_detector.py d:RodsProjremote_terminal/src/shared_state.py d:RodsProjremote_terminal/src/ssh_manager.py d:RodsProjremote_terminal/src/utils.py d:RodsProjremote_terminal/src/web_terminal.py d:RodsProjremote_terminal/view_db.py)",
+      "Bash(do wc -l \"$file\")"
+    ]
+  }
+}

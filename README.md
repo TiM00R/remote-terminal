@@ -303,51 +303,157 @@ Service: nginx.service is active
 
 ### Project Structure
 
+
 ```
 remote_terminal/
-├── config/                    # Default configuration templates
-│   ├── config.yaml            # Default settings (packaged)
-│   └── hosts.yaml.example     # Server template (packaged)
-├── data/                      # SQLite database (user directory)
-│   └── remote_terminal.db     # Command history, conversations, recipes, scripts
-├── docs/                      # Documentation
-│   ├── QUICK_START.md
-│   ├── INSTALLATION.md
-│   ├── USER_GUIDE.md
+├── config/                         # Default configuration templates
+│   ├── config.yaml                 # Default settings (packaged)
+│   └── hosts.yaml.example          # Server template (packaged)
+├── data/                           # SQLite database (user directory)
+│   └── remote_terminal.db          # Command history, conversations, recipes, scripts
+├── docs/                           # Documentation
+│   ├── DATABASE_SCHEMA.md
 │   ├── FEATURE_REFERENCE.md
+│   ├── INDEX.md
+│   ├── INSTALLATION.md
+│   ├── QUICK_START.md
+│   ├── RELEASE_NOTES_v3.1.md
 │   ├── TROUBLESHOOTING.md
-│   ├── WEBSOCKET_BROADCAST.md
-│   └── RELEASE_NOTES_v3.1.md
-├── recipes/                   # Example automation recipes
-├── src/                       # Source code
-│   ├── tools/                 # MCP tool modules
-│   │   ├── tools_hosts.py     # Server management
-│   │   ├── tools_commands.py  # Command execution
-│   │   ├── tools_sftp.py      # File transfer
-│   │   ├── tools_batch.py     # Batch execution & script management
-│   │   ├── tools_conversations.py
-│   │   └── tools_recipes.py
-│   ├── config_init.py         # First-run config setup
-│   ├── mcp_server.py          # MCP server entry point
-│   ├── ssh_manager.py         # SSH connection handling
-│   ├── command_state.py       # Command tracking
-│   ├── database_manager.py    # SQLite integration
-│   ├── database_batch.py      # Batch script database
-│   ├── output_filter.py       # Smart filtering
-│   ├── prompt_detector.py     # Command completion detection
-│   └── web_terminal.py        # WebSocket-enabled web interface
-└── standalone/                # Standalone web UI
-    ├── static/
-    │   ├── css/
-    │   │   └── control-styles.css  # Bash syntax highlighting
-    │   ├── js/
-    │   │   ├── control-main.js     # Script loading
-    │   │   └── control-forms.js    # Script selectors & highlighting
-    │   └── tool-schemas/
-    │       └── batch.json          # Batch tool definitions
-    ├── mcp_control.html
-    └── standalone_mcp.py
+│   ├── USER_GUIDE.md
+│   └── WEBSOCKET_BROADCAST.md
+├── recipes/                        # Example automation recipes
+├── src/                            # Source code (modular architecture)
+│   ├── batch/                      # Batch execution system
+│   │   ├── batch_executor.py
+│   │   ├── batch_helpers.py
+│   │   └── batch_parser.py
+│   ├── config/                     # Configuration management
+│   │   ├── config.py
+│   │   ├── config_dataclasses.py
+│   │   ├── config_init.py
+│   │   └── config_loader.py
+│   ├── database/                   # Database operations (SQLite)
+│   │   ├── database_manager.py     # Core database manager
+│   │   ├── database_batch.py       # Batch script storage
+│   │   ├── database_batch_execution.py
+│   │   ├── database_batch_queries.py
+│   │   ├── database_batch_scripts.py
+│   │   ├── database_commands.py    # Command history
+│   │   ├── database_conversations.py
+│   │   ├── database_recipes.py     # Recipe storage
+│   │   └── database_servers.py     # Machine identity tracking
+│   ├── output/                     # Output filtering & formatting
+│   │   ├── output_buffer.py
+│   │   ├── output_buffer_base.py
+│   │   ├── output_buffer_filtered.py
+│   │   ├── output_filter.py        # Smart filtering (95% token savings)
+│   │   ├── output_filter_commands.py
+│   │   ├── output_filter_decision.py
+│   │   └── output_formatter.py
+│   ├── prompt/                     # Command completion detection
+│   │   ├── prompt_detector.py
+│   │   ├── prompt_detector_checks.py
+│   │   ├── prompt_detector_pager.py
+│   │   └── prompt_detector_patterns.py
+│   ├── ssh/                        # SSH/SFTP operations
+│   │   ├── ssh_manager.py          # High-level SSH manager
+│   │   ├── ssh_connection.py       # Connection lifecycle
+│   │   ├── ssh_commands.py         # Command execution
+│   │   └── ssh_io.py               # Input/output streaming
+│   ├── state/                      # Shared state management
+│   │   ├── shared_state_conversation.py
+│   │   ├── shared_state_monitor.py
+│   │   └── shared_state_transfer.py
+│   ├── static/                     # Web terminal static assets
+│   │   ├── fragments/              # HTML fragments
+│   │   ├── vendor/                 # xterm.js library
+│   │   ├── terminal.css
+│   │   ├── terminal.js
+│   │   └── transfer-panel.js
+│   ├── tools/                      # MCP tool modules (modular)
+│   │   ├── decorators.py           # Tool decorators
+│   │   ├── tools_hosts.py          # Server management (main)
+│   │   ├── tools_hosts_crud.py     # Add/remove/update servers
+│   │   ├── tools_hosts_select.py   # Server selection & connection
+│   │   ├── tools_commands.py       # Command execution (main)
+│   │   ├── tools_commands_database.py
+│   │   ├── tools_commands_execution.py
+│   │   ├── tools_commands_status.py
+│   │   ├── tools_commands_system.py
+│   │   ├── tools_conversations.py  # Conversation tracking (main)
+│   │   ├── tools_conversations_lifecycle.py
+│   │   ├── tools_conversations_query.py
+│   │   ├── tools_batch.py          # Batch script execution (main)
+│   │   ├── tools_batch_execution.py
+│   │   ├── tools_batch_helpers.py
+│   │   ├── tools_batch_management.py
+│   │   ├── tools_recipes.py        # Recipe automation (main)
+│   │   ├── tools_recipes_create.py
+│   │   ├── tools_recipes_crud.py
+│   │   ├── tools_recipes_execution.py
+│   │   ├── tools_recipes_helpers.py
+│   │   ├── tools_recipes_modify.py
+│   │   ├── tools_recipes_query.py
+│   │   ├── tools_sftp.py           # File transfer (main)
+│   │   ├── tools_sftp_single.py    # Single file transfer
+│   │   ├── tools_sftp_directory.py # Directory transfer
+│   │   ├── tools_sftp_directory_download.py
+│   │   ├── tools_sftp_directory_upload.py
+│   │   ├── tools_sftp_exceptions.py
+│   │   ├── tools_sftp_utils.py
+│   │   ├── sftp_compression.py     # Compression logic
+│   │   ├── sftp_compression_download.py
+│   │   ├── sftp_compression_tar.py
+│   │   ├── sftp_compression_upload.py
+│   │   ├── sftp_decisions.py       # Auto/manual compression decisions
+│   │   ├── sftp_progress.py        # Progress tracking
+│   │   ├── sftp_transfer_compressed.py
+│   │   ├── sftp_transfer_download.py
+│   │   ├── sftp_transfer_scan.py
+│   │   ├── sftp_transfer_standard.py
+│   │   ├── sftp_transfer_upload.py
+│   │   └── tools_info.py           # System information
+│   ├── utils/                      # Utility functions
+│   │   ├── utils.py
+│   │   ├── utils_format.py
+│   │   ├── utils_machine_id.py     # Hardware/OS fingerprinting
+│   │   ├── utils_output.py
+│   │   └── utils_text.py
+│   ├── web/                        # Web terminal (WebSocket-enabled)
+│   │   ├── web_terminal.py         # Main web server
+│   │   ├── web_terminal_ui.py      # UI components
+│   │   └── web_terminal_websocket.py  # Multi-terminal sync
+│   ├── mcp_server.py               # MCP server entry point
+│   ├── shared_state.py             # Global shared state
+│   ├── command_state.py            # Command registry & tracking
+│   ├── hosts_manager.py            # Multi-server configuration
+│   └── error_check_helper.py       # Error detection
+└── standalone/                     # Standalone web UI (no Claude)
+├── static/
+│   ├── css/                        # Standalone UI styles
+│   │   ├── control-forms.css
+│   │   ├── control-layout.css
+│   │   ├── control-response.css
+│   │   └── control-styles.css      # Bash syntax highlighting
+│   ├── js/                         # Standalone UI scripts
+│   │   ├── control-forms.js
+│   │   ├── control-forms-fields.js
+│   │   ├── control-forms-generation.js
+│   │   ├── control-forms-utils.js
+│   │   ├── control-main.js
+│   │   └── control-response.js
+│   └── tool-schemas/               # MCP tool schemas
+│       ├── batch.json
+│       ├── commands.json
+│       ├── file-transfer.json
+│       ├── servers.json
+│       └── workflows.json
+├── mcp_control.html                # Control panel HTML
+├── standalone_mcp.py               # Standalone server entry point
+├── standalone_mcp_endpoints.py     # API endpoints
+└── standalone_mcp_startup.py       # Initialization & connection
 ```
+
 
 ### Technology Stack
 
