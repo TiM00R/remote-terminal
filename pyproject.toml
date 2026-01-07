@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "remote-terminal-mcp"
-version = "1.2.0"
+version = "1.2.1"
 description = "Full SSH terminal for Linux servers with AI/user control and dual-stream visibility"
 readme = "README.md"
 requires-python = ">=3.8"

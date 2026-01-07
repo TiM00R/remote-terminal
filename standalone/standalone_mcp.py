@@ -28,16 +28,28 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 import uvicorn
 
-# Import standalone modules
-from standalone_mcp_endpoints import (
-    execute_mcp_tool_endpoint, serve_control_page, connection_info_endpoint,
-    list_servers_endpoint, select_server_endpoint
-)
-from standalone_mcp_startup import (
-    wait_for_port, open_control_page, initialize_config_and_database,
-    setup_server_connection, setup_machine_id
-)
-
+# Import standalone modules (try package import first, then direct)
+try:
+    # For installed package
+    from standalone.standalone_mcp_endpoints import (
+        execute_mcp_tool_endpoint, serve_control_page, connection_info_endpoint,
+        list_servers_endpoint, select_server_endpoint
+    )
+    from standalone.standalone_mcp_startup import (
+        wait_for_port, open_control_page, initialize_config_and_database,
+        setup_server_connection, setup_machine_id
+    )
+except ModuleNotFoundError:
+    # For running from source
+    from standalone_mcp_endpoints import (
+        execute_mcp_tool_endpoint, serve_control_page, connection_info_endpoint,
+        list_servers_endpoint, select_server_endpoint
+    )
+    from standalone_mcp_startup import (
+        wait_for_port, open_control_page, initialize_config_and_database,
+        setup_server_connection, setup_machine_id
+    )
+    
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
