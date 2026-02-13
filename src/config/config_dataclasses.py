@@ -53,11 +53,15 @@ class PromptDetectionConfig:
 
     def __post_init__(self):
         if self.patterns is None:
+            # FIXED: Added optional virtual environment prefix support
+            # Pattern: (\(.+\)\s+)? matches optional (venv_name) prefix
+            # Examples: (.venv) user@host:~$, (conda) user@host:~$, user@host:~$
+            # Note: \s* at end allows optional trailing whitespace after prompt
             self.patterns = [
-                "{user}@{host}:~$",
-                "{user}@{host}:.*[$#]",
-                "root@{host}:~#",
-                "root@{host}:.*#"
+                r"(\(.+\)\s+)?{user}@{host}:.*$\s*",       # Pattern 1: Optional venv + any path + trailing space
+                r"(\(.+\)\s+)?{user}@{host}:.*#\s*",       # Pattern 2: Optional venv + root prompt + trailing space
+                r"(\(.+\)\s+)?root@{host}:~#\s*",          # Pattern 3: Optional venv + root home
+                r"(\(.+\)\s+)?root@{host}:.*#\s*"          # Pattern 4: Optional venv + root any directory
             ]
         if self.prompt_changing_commands is None:
             self.prompt_changing_commands = [

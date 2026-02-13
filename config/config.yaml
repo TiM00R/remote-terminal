@@ -29,12 +29,13 @@ command_execution:
 prompt_detection:
   # Prompt patterns to detect command completion
   
+
   patterns:
-    - "{user}@{host}:.*\\$\\s*"  # ✅ Matches any path
-    - "{user}@{host}:.*#\\s*"    # ✅ Matches root prompt too
-    - "root@{host}:~#\\s*"
-    - "root@{host}:.*#\\s*"
-  
+      - '(\(.+\)\s+)?{user}@{host}:.*$\s*'     # Optional venv + any path
+      - '(\(.+\)\s+)?{user}@{host}:.*#\s*'     # Optional venv + root prompt
+      - '(\(.+\)\s+)?root@{host}:~#\s*'        # Optional venv + root home
+      - '(\(.+\)\s+)?root@{host}:.*#\s*'       # Optional venv + root any dir
+
   # Verification settings
   verification_enabled: true
   verification_delay: 0.3                 # Seconds to wait before confirming prompt
