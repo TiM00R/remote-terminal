@@ -1,6 +1,7 @@
 """
 Machine ID Helper Functions
 Fetch and validate machine IDs from remote servers
+FIXED: Added venv support to GENERIC_PROMPT
 """
 
 import re
@@ -43,7 +44,8 @@ async def fetch_machine_id_from_server(shared_state, web_server, host: str, port
     import json
 
     # Generic pattern for internal commands
-    GENERIC_PROMPT = r'^[^@\s:]+@[A-Za-z0-9.-]+:[^$#]*[$#]\s*$'
+    # FIXED: Added (\(.+\)\s+)? to support virtual environment prompts
+    GENERIC_PROMPT = r'^(\(.+\)\s+)?[^@\s:]+@[A-Za-z0-9.-]+:[^$#]*[$#]\s*$'
 
     machine_id = None
     identity_status = "unknown"

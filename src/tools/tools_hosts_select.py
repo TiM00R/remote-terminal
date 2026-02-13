@@ -1,6 +1,7 @@
 """
 Server Selection and Connection
 Server selection with machine ID detection and conversation management
+FIXED: Added venv support to GENERIC_PROMPT
 """
 
 import re
@@ -19,7 +20,8 @@ async def _select_server(shared_state, hosts_manager, database, web_server, iden
     """Select and connect to a server - Phase 1 Enhanced with conversation workflow and machine_id retry logic"""
 
     # Generic pattern for internal commands
-    GENERIC_PROMPT = r'^[^@\s:]+@[A-Za-z0-9.-]+:[^$#]*[$#]\s*$'
+    # FIXED: Added (\(.+\)\s+)? to support virtual environment prompts
+    GENERIC_PROMPT = r'^(\(.+\)\s+)?[^@\s:]+@[A-Za-z0-9.-]+:[^$#]*[$#]\s*$'
 
     srv = hosts_manager.find_server(identifier)
 

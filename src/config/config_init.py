@@ -20,14 +20,18 @@ def get_config_root() -> Path:
 
 def get_package_config_dir() -> Path:
     """Get the package's default config directory"""
-    # This file is in src/ or standalone/, go up to find config/
+    # This file is in src/config/config_init.py
+    # Need to find the config/ directory which could be:
+    # - When running from source: project_root/config/
+    # - When installed via pip: site-packages/config/
     current_file = Path(__file__)
     
-    # Try to find config/ directory
-    # Could be at project root (GitHub) or in site-packages (pip)
+    # Try to find config/ directory in order of likelihood
+    # FIXED: Added 3-level-up path for pip installations
     possible_locations = [
-        current_file.parent.parent / 'config',  # From src/ or standalone/
-        current_file.parent / 'config',         # If config is in same dir
+        current_file.parent.parent.parent / 'config',  # 3 up: site-packages/config/ (pip install)
+        current_file.parent.parent / 'config',          # 2 up: project_root/config/ (source)
+        current_file.parent / 'config',                 # 1 up: If config is in same dir (fallback)
     ]
     
     for location in possible_locations:

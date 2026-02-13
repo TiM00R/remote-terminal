@@ -1,6 +1,7 @@
 """
 Prompt Pattern Classes
 Pattern definitions and substitution logic
+FIXED: Added venv support to fallback pattern
 """
 
 import re
@@ -203,5 +204,6 @@ class PromptPatternManager:
             # Return first (most common) pattern
             return patterns[0]
         else:
-            # Fallback - flexible pattern that matches any user@host:path$
-            return r"[a-zA-Z0-9_]+@[a-zA-Z0-9\-\.]+:.*[$#]\s*$"
+            # Fallback - flexible pattern that matches any user@host:path$ with optional venv prefix
+            # FIXED: Added (\(.+\)\s+)? to support virtual environment prompts like (.venv) user@host:~$
+            return r"(\(.+\)\s+)?[a-zA-Z0-9_]+@[a-zA-Z0-9\-\.]+:.*[$#]\s*$"

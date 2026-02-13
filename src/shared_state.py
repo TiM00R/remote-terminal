@@ -3,6 +3,7 @@ Shared terminal state management
 Singleton state shared between MCP server and Web UI
 Version 3.2 - Phase 1 Enhanced: Conversation workflow automation
 CLEANED: Removed unused HistoryManager
+FIXED: Use PromptDetectionConfig patterns (with defaults) instead of raw YAML
 """
 
 import threading
@@ -132,8 +133,14 @@ class SharedTerminalState:
             )
 
         # Initialize prompt detector
+        # FIXED: Pass config with patterns from PromptDetectionConfig (includes defaults)
+        # instead of raw YAML to ensure default patterns are used when not in YAML
+        prompt_config = config._raw_config.copy()
+        prompt_config['prompt_detection'] = prompt_config.get('prompt_detection', {}).copy()
+        prompt_config['prompt_detection']['patterns'] = config.prompt_detection.patterns
+        
         self.prompt_detector = PromptDetector(
-            config=config._raw_config,
+            config=prompt_config,
             ssh_manager=self.ssh_manager
         )
 
