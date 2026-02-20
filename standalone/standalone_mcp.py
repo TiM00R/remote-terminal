@@ -93,6 +93,9 @@ def main():
     g_hosts_manager = HostsManager(str(hosts_path))
     logger.info(f"Loaded {len(g_hosts_manager.servers)} server(s)")
 
+    # Log startup config summary (once, for remote support/debugging)
+    g_config.log_startup_summary(g_hosts_manager)
+
     # Get default server (may not exist if configured incorrectly)
     default_server = g_hosts_manager.get_default()
     if not default_server and len(g_hosts_manager.servers) > 0:

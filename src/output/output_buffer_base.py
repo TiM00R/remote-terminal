@@ -1,6 +1,7 @@
 """
 Basic Output Buffer
 Manages terminal output with scrollback and line tracking
+FIXED: Added total_lines_added to handle buffer overflow
 """
 
 import logging
@@ -41,6 +42,7 @@ class OutputBuffer:
         self.max_lines = max_lines
         self.lines: deque[OutputLine] = deque(maxlen=max_lines)
         self.current_output = ""  # Accumulates output until newline
+        self.total_lines_added = 0  # Track total lines ever added (for overflow detection)
 
     def add(self, text: str) -> List[OutputLine]:
         """
@@ -60,6 +62,7 @@ class OutputBuffer:
             line_text, self.current_output = self.current_output.split('\n', 1)
             line = OutputLine(line_text)
             self.lines.append(line)
+            self.total_lines_added += 1  # Track total lines added
             new_lines.append(line)
 
         return new_lines
@@ -74,9 +77,20 @@ class OutputBuffer:
         if self.current_output:
             line = OutputLine(self.current_output)
             self.lines.append(line)
+            self.total_lines_added += 1  # Track total lines added
             self.current_output = ""
             return line
         return None
+
+    def get_buffer_offset(self) -> int:
+        """
+        Get the offset between total lines added and current buffer size
+        This represents how many lines have been dropped due to buffer overflow
+
+        Returns:
+            Number of lines dropped from the beginning
+        """
+        return self.total_lines_added - len(self.lines)
 
     def get_last_n(self, n: int = 100) -> List[OutputLine]:
         """
@@ -99,7 +113,7 @@ class OutputBuffer:
         Get text from buffer
 
         Args:
-            start: Start line index
+            start: Start line index (relative to current buffer)
             end: End line index (None for all)
 
         Returns:
@@ -112,6 +126,7 @@ class OutputBuffer:
         """Clear all buffer contents"""
         self.lines.clear()
         self.current_output = ""
+        self.total_lines_added = 0  # Reset counter
         logger.debug("Output buffer cleared")
 
     def mark_lines(self, start: int, end: int) -> int:
@@ -156,5 +171,7 @@ class OutputBuffer:
             'total_lines': len(self.lines),
             'max_lines': self.max_lines,
             'marked_lines': sum(1 for line in self.lines if line.marked),
-            'partial_line_length': len(self.current_output)
+            'partial_line_length': len(self.current_output),
+            'total_lines_added': self.total_lines_added,
+            'buffer_offset': self.get_buffer_offset()
         }

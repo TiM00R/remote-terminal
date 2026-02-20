@@ -74,7 +74,10 @@ class RemoteTerminalMCP:
         
         # Load hosts manager
         self.hosts_manager = HostsManager(str(hosts_path))
-        
+
+        # Log startup config summary (once, for remote support/debugging)
+        self.config.log_startup_summary(self.hosts_manager)
+
         # Initialize shared state (includes database initialization)
         self._shared_state.initialize(self.config)
         

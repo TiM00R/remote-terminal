@@ -164,13 +164,12 @@ class SharedTerminalState:
         """
         if self.prompt_detector:
             self.prompt_detector.set_credentials(user=user, host=host)
-            logger.info(f"Updated prompt detector credentials: {user}@{host}")
+            #logger.info(f"Updated prompt detector credentials: {user}@{host}")
 
-        logger.info(f"DEBUG: update_credentials called with user='{user}', host='{host}'")
+        logger.info(f"Update_credentials called with user='{user}', host='{host}'")
         if self.prompt_detector:
-            logger.info(f"DEBUG: BEFORE set_credentials - prompt_detector.user='{self.prompt_detector.user}', prompt_detector.host='{self.prompt_detector.host}'")
             self.prompt_detector.set_credentials(user=user, host=host)
-            logger.info(f"DEBUG: AFTER set_credentials - prompt_detector.user='{self.prompt_detector.user}', prompt_detector.host='{self.prompt_detector.host}'")
+            #logger.info(f"DEBUG: AFTER set_credentials - prompt_detector.user='{self.prompt_detector.user}', prompt_detector.host='{self.prompt_detector.host}'")
             logger.info(f"Updated prompt detector credentials: {user}@{host}")
         else:
             logger.warning("DEBUG: prompt_detector is None!")

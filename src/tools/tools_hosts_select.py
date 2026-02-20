@@ -192,6 +192,10 @@ async def _select_server(shared_state, hosts_manager, database, web_server, iden
             shared_state.set_current_server(None)
     # ========== END ==========
 
+    # Auto-update default server to last successfully connected server
+    hosts_manager.set_default(identifier)
+    logger.info(f"Default server updated to: {srv.name}")
+
     # Update prompt detector with new credentials
     shared_state.update_credentials(user=user, host=hostname if hostname else host)
 

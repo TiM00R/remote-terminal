@@ -50,6 +50,7 @@ class PromptDetectionConfig:
     prompt_changing_commands: list = None
     background_command_pattern: str = r"&\s*$"
     warn_on_background: bool = True
+    debug_logging: bool = False
 
     def __post_init__(self):
         if self.patterns is None:

@@ -109,7 +109,8 @@ class Config:
             verification_delay=prompt_data.get('verification_delay', 0.3),
             prompt_changing_commands=prompt_data.get('prompt_changing_commands'),
             background_command_pattern=prompt_data.get('background_command_pattern', r"&\s*$"),
-            warn_on_background=prompt_data.get('warn_on_background', True)
+            warn_on_background=prompt_data.get('warn_on_background', True),
+            debug_logging=prompt_data.get('debug_logging', False)
         )
 
         # Buffer configuration
@@ -237,6 +238,27 @@ class Config:
             return False
 
         return True
+
+    def log_startup_summary(self, hosts_manager=None) -> None:
+        """Log config summary at startup - useful for remote support"""
+        import json
+
+        # Redact sensitive fields recursively
+        def redact(obj, sensitive_keys=("password", "secret", "token", "key")):
+            if isinstance(obj, dict):
+                return {k: "***" if k.lower() in sensitive_keys else redact(v, sensitive_keys)
+                        for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [redact(i, sensitive_keys) for i in obj]
+            return obj
+
+        safe_config = redact(self._raw_config)
+        logger.info("[STARTUP] Configuration:\n%s", json.dumps(safe_config, indent=2, default=str))
+
+        if hosts_manager is not None:
+            servers = hosts_manager.servers
+            default = hosts_manager.default_server or "(none)"
+            logger.info(f"[STARTUP] Hosts: {len(servers)} server(s) loaded, default={default}")
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value by dot-notation key"""

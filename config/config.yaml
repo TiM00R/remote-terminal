@@ -64,6 +64,11 @@ prompt_detection:
   background_command_pattern: "&\\s*$"
   warn_on_background: true
 
+  # Debug logging - set to true to log every poll and every line tested
+  # Useful for diagnosing prompt pattern issues
+  # WARNING: Very verbose - only enable when troubleshooting
+  debug_logging: false
+
 # Output Buffer Configuration
 buffer:
   max_lines: 10000

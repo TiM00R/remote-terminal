@@ -30,6 +30,14 @@ class PromptChecker:
         # Settings
         self.verification_enabled = config.get("prompt_detection", {}).get("verification_enabled", True)
         self.verification_delay = config.get("prompt_detection", {}).get("verification_delay", 0.3)
+        self.debug_logging = config.get("prompt_detection", {}).get("debug_logging", False)
+
+        # Production logging state (reset per command)
+        self._cmd_start_line = None   # detect new command
+        self._poll_count = 0
+        self._lines_checked = 0
+        self._last_non_match = None
+        self._matched_line = None
 
     async def verify_prompt(self, buffer, prompt_pattern: str) -> Tuple[bool, str]:
         """
@@ -84,10 +92,22 @@ class PromptChecker:
         Returns:
             (completed, reason) tuple
         """
-        # DIAGNOSTIC: Log what we're checking
-        logger.info(f"[PROMPT CHECK] Looking for pattern: {prompt_pattern}")
-        logger.info(f"[PROMPT CHECK] command_start_line: {buffer.command_start_line}")
-        logger.info(f"[PROMPT CHECK] total_lines in buffer: {len(buffer.buffer.lines)}")
+        # Detect new command (command_start_line changed = new command started)
+        if buffer.command_start_line != self._cmd_start_line:
+            self._cmd_start_line = buffer.command_start_line
+            self._poll_count = 0
+            self._lines_checked = 0
+            self._last_non_match = None
+            self._matched_line = None
+            logger.info(f"[PROMPT CHECK] Start: pattern={prompt_pattern}, start_line={buffer.command_start_line}, total_lines={len(buffer.buffer.lines)}")
+
+        self._poll_count += 1
+
+        # Debug mode: full verbose logging (same as original behavior)
+        if self.debug_logging:
+            logger.info(f"[PROMPT CHECK] Looking for pattern: {prompt_pattern}")
+            logger.info(f"[PROMPT CHECK] command_start_line: {buffer.command_start_line}")
+            logger.info(f"[PROMPT CHECK] total_lines in buffer: {len(buffer.buffer.lines)}")
 
         # ========== INSERT HERE - RIGHT AFTER THE 3 LOGGER LINES ==========
         # PRIORITY CHECK: Detect and quit pagers before checking for prompts
@@ -119,27 +139,39 @@ class PromptChecker:
         # The NEW completion prompt doesn't have a newline, so it stays in current_output
         if hasattr(buffer, 'buffer') and hasattr(buffer.buffer, 'current_output'):
             current = buffer.buffer.current_output
-            logger.info(f"[PROMPT CHECK] current_output: {repr(current)}")
+            if self.debug_logging:
+                logger.info(f"[PROMPT CHECK] current_output: {repr(current)}")
 
             if current:
                 detected, reason = self.pattern_manager.detect_prompt_in_line(current, prompt_pattern)
 
-                logger.info(f"[PROMPT CHECK] Partial line check: detected={detected}, reason={reason}")
+                if self.debug_logging:
+                    logger.info(f"[PROMPT CHECK] Partial line check: detected={detected}, reason={reason}")
 
                 if detected is True:
-                    # Clean prompt found in partial line!
-                    logger.info(f"PROMPT DETECTED in partial line: {reason}")
+                    self._matched_line = current
+                    logger.info(
+                        f"[PROMPT CHECK] Detected: partial_line_{reason}, polls={self._poll_count}, "
+                        f"lines_checked={self._lines_checked}, "
+                        f"last_non_match={repr(self._last_non_match)}, matched={repr(current)}"
+                    )
                     return True, f"partial_line_{reason}"
 
                 elif detected == "verify":
-                    # Suspicious prompt in partial line - verify it
-                    logger.info(f"? Suspicious prompt in partial line: {reason}, verifying...")
+                    logger.info(f"[PROMPT CHECK] Suspicious prompt in partial line: {reason}, verifying...")
                     verified, verify_reason = await self.verify_prompt(buffer, prompt_pattern)
                     if verified:
-                        logger.info(f"PROMPT VERIFIED: {verify_reason}")
+                        self._matched_line = current
+                        logger.info(
+                            f"[PROMPT CHECK] Detected: {verify_reason}, polls={self._poll_count}, "
+                            f"lines_checked={self._lines_checked}, "
+                            f"last_non_match={repr(self._last_non_match)}, matched={repr(current)}"
+                        )
                         return True, verify_reason
                     else:
-                        logger.info(f"Verification failed: {verify_reason}")
+                        logger.info(f"[PROMPT CHECK] Verification failed: {verify_reason}")
+                else:
+                    self._last_non_match = current
         else:
             logger.warning("[PROMPT CHECK] Buffer doesn't have current_output attribute!")
 
@@ -150,7 +182,8 @@ class PromptChecker:
         start_checking_from = buffer.command_start_line + 1  # Skip command echo line
 
         if start_checking_from >= total_lines:
-            logger.info(f"[PROMPT CHECK] No completed output lines yet (start={start_checking_from}, total={total_lines})")
+            if self.debug_logging:
+                logger.info(f"[PROMPT CHECK] No completed output lines yet (start={start_checking_from}, total={total_lines})")
             return False, "no_output_yet"
 
         # Get lines AFTER command echo
@@ -159,28 +192,43 @@ class PromptChecker:
 
         # Check last 5 lines from command output only
         recent_lines = command_output_lines[-5:] if len(command_output_lines) > 5 else command_output_lines
-        logger.info(f"[PROMPT CHECK] Checking {len(recent_lines)} recent lines from command output")
+
+        if self.debug_logging:
+            logger.info(f"[PROMPT CHECK] Checking {len(recent_lines)} recent lines from command output")
 
         for i, line in enumerate(recent_lines):
-            logger.info(f"[PROMPT CHECK] Line {i}: {repr(line.text)}")
+            self._lines_checked += 1
+            if self.debug_logging:
+                logger.info(f"[PROMPT CHECK] Line {i}: {repr(line.text)}")
             detected, reason = self.pattern_manager.detect_prompt_in_line(line.text, prompt_pattern)
 
             if detected is True:
-                # Clean prompt found
-                logger.info(f"PROMPT DETECTED in output line {i}: {reason}")
+                self._matched_line = line.text
+                logger.info(
+                    f"[PROMPT CHECK] Detected: {reason}, polls={self._poll_count}, "
+                    f"lines_checked={self._lines_checked}, "
+                    f"last_non_match={repr(self._last_non_match)}, matched={repr(line.text)}"
+                )
                 return True, reason
 
             elif detected == "verify":
-                # Suspicious prompt - verify it
-                logger.info(f"? Suspicious prompt in output line {i}: {reason}, verifying...")
+                logger.info(f"[PROMPT CHECK] Suspicious prompt in output line {i}: {reason}, verifying...")
                 verified, verify_reason = await self.verify_prompt(buffer, prompt_pattern)
                 if verified:
-                    logger.info(f"PROMPT VERIFIED: {verify_reason}")
+                    self._matched_line = line.text
+                    logger.info(
+                        f"[PROMPT CHECK] Detected: {verify_reason}, polls={self._poll_count}, "
+                        f"lines_checked={self._lines_checked}, "
+                        f"last_non_match={repr(self._last_non_match)}, matched={repr(line.text)}"
+                    )
                     return True, verify_reason
                 else:
-                    logger.info(f"Verification failed: {verify_reason}")
+                    logger.info(f"[PROMPT CHECK] Verification failed: {verify_reason}")
+            else:
+                self._last_non_match = line.text
 
-        logger.info("[PROMPT CHECK] No prompt found in command output")
+        if self.debug_logging:
+            logger.info("[PROMPT CHECK] No prompt found in command output")
         return False, "no_prompt_found"
 
     def is_sudo_prompt(self, buffer) -> bool:

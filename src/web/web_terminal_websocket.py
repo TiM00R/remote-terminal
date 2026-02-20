@@ -101,7 +101,7 @@ class WebSocketManager:
         Background task that broadcasts SSH output to all connected WebSockets
         Runs continuously while server is active
         """
-        logger.info("✓ Broadcast loop started successfully")
+        logger.info("Broadcast loop started successfully")
 
         while self.shared_state.web_server_running:
             try:

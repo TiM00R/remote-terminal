@@ -89,7 +89,7 @@ class SSHConnection:
         try:
             logger.info(f"Connecting to {self.user}@{self.host}:{self.port}")
 
-            logger.info(f"DEBUG: password='{self.password}', type={type(self.password)}, len={len(self.password)}")  
+            ## logger.info(f"DEBUG: password='{self.password}', type={type(self.password)}, len={len(self.password)}")  
 
 
             self.client = paramiko.SSHClient()

@@ -642,56 +642,101 @@ This is Tim's personal project. If you'd like to contribute:
 
 ## 📜 Version History
 
-### Version 1.1.3 (Current - December 20, 2024)
+### Version 1.3.1 (Current - February 20, 2026)
 
-**Configuration System Improvements:**
-- ✅ Auto-copy config files on first run
-- ✅ User data preserved outside package directory
-- ✅ REMOTE_TERMINAL_ROOT environment variable support
-- ✅ Simplified installation process
-- ✅ Config templates packaged in config/ folder
+**Prompt Detection Logging Overhaul:**
+- ✅ Production mode: 2 log lines per command (Start + Detected) instead of hundreds
+- ✅ Debug mode: full verbose logging via `prompt_detection.debug_logging: true` in config.yaml
+- ✅ Detection summary includes: polls, lines_checked, last_non_match, matched string, total_lines
+- ✅ Pager/sudo/verify events still logged in production (rare, meaningful)
 
-### Version 3.1 (December 16, 2024)
+**Startup Config Dump:**
+- ✅ Full config.yaml logged at startup (passwords redacted)
+- ✅ Hosts summary logged (server count + default server)
+- ✅ Simplifies remote support and troubleshooting for distributed users
 
-**NEW - Batch Script Management:**
-- ✅ 5 new MCP tools for batch script library management
+**Auto-Default Server:**
+- ✅ Default server automatically updated on every successful connection
+- ✅ Eliminates "connected to wrong server after restart" problem
+- ✅ Persisted to hosts.yaml immediately
+
+**Buffer Overflow Fix:**
+- ✅ Commands no longer return [No output] after buffer reaches max_lines
+- ✅ command_start_line now tracks absolute position with offset correction
+- ✅ Sliding window deque buffer works correctly at any fill level
+
+### Version 1.3.0 (January 2026)
+
+**Virtual Environment Prompt Support:**
+- ✅ Added venv prefix support to all prompt patterns `(\(.+\)\s+)?`
+- ✅ Supports Python venv, Conda, Poetry, Pipenv and similar tools
+- ✅ Fixed GENERIC_PROMPT patterns in server selection and machine ID detection
+- ✅ Fixed pattern defaults not applied when missing from config.yaml
+- ✅ Fixed config file copy path for pip installations
+- ✅ Fixed hosts.yaml.example template (removed invalid default field)
+- ✅ All fixes tested and verified
+
+### Version 1.2.1 (December 2024)
+
+**Standalone Import Fix:**
+- ✅ Fixed ModuleNotFoundError in standalone modules
+- ✅ Added try/except fallback imports for both source and installed package usage
+
+**Code Modularization:**
+- ✅ Reorganized source into modular directory structure (batch, config, database, output, prompt, ssh, state, utils, web)
+- ✅ Split large tool modules into smaller focused files
+- ✅ All 37 MCP tools tested and working after refactor
+
+### Version 1.2.0 (December 2024)
+
+**PyPI Package Distribution:**
+- ✅ Full PyPI package with modern pyproject.toml configuration
+- ✅ Automatic config initialization via REMOTE_TERMINAL_ROOT environment variable
+- ✅ Config files auto-copy to user directory on first run (survives upgrades)
+- ✅ Enhanced list_servers tool with [CURRENT] and [DEFAULT] markers
+- ✅ Fixed standalone mode crash when default server unreachable
+
+**Standalone Web UI - Help System:**
+- ✅ Help button (❓) added to all MCP tools with comprehensive documentation
+- ✅ Help modal with full usage examples and parameter descriptions
+- ✅ Updated all tool schemas: workflows, commands, batch, servers, file-transfer
+- ✅ Enhanced CSS with consistent button colors (green Execute, blue Help)
+
+**Recipe Management (3 new tools):**
+- ✅ `delete_recipe` - Permanent deletion with two-step confirmation
+- ✅ `create_recipe_from_commands` - Manual recipe creation without execution
+- ✅ `update_recipe` - In-place recipe modification (preserves ID/stats)
+- ✅ Recipe dropdown selectors replacing manual ID entry in standalone UI
+
+**WebSocket Multi-Terminal Sync:**
+- ✅ Replaced HTTP polling with WebSocket broadcast architecture
+- ✅ Multiple browser terminals stay perfectly synchronized
+- ✅ Auto-reconnect on connection loss
+
+### Version 1.1.0 (December 2024)
+
+**Batch Script Management (5 new tools):**
+- ✅ `list_batch_scripts`, `get_batch_script`, `save_batch_script`, `execute_script_content_by_id`, `delete_batch_script`
 - ✅ Automatic deduplication via SHA256 content hash
 - ✅ Usage statistics tracking (times_used, last_used_at)
-- ✅ Edit mode for modifying saved scripts
+- ✅ Edit mode for script modifications
 - ✅ Two-step deletion with confirmation
-- ✅ Standalone UI with bash syntax highlighting (VS Code colors)
-- ✅ Script dropdown selectors with auto-population
+- ✅ Bash syntax highlighting in standalone UI (VS Code colors)
+- ✅ Tool renaming: `create_diagnostic_script` → `build_script_from_commands`, `execute_batch_script` → `execute_script_content`
 
-**Tool Renaming (for clarity):**
-- ✅ `create_diagnostic_script` → `build_script_from_commands`
-- ✅ `execute_batch_script` → `execute_script_content`
+### Version 1.0.0 (Initial Release - December 2024)
 
-### Version 3.0 (December 2024)
-
-- ✅ Converted from PostgreSQL to SQLite
-- ✅ Eliminated Docker dependency
-- ✅ Multi-server support with server selection
-- ✅ Machine identity tracking (hardware fingerprints)
-- ✅ Conversation management (pause/resume)
-- ✅ Recipe system for automation
-- ✅ Batch script execution with progress tracking
-- ✅ SFTP directory transfer with compression
-- ✅ Comprehensive database integration
-- ✅ Full audit trail
-- ✅ WebSocket-based multi-terminal synchronization
-
-### Version 2.0 (October 2024)
-
-- ✅ Dual-stream architecture
-- ✅ Smart output filtering
-- ✅ Web terminal auto-open
-- ✅ MCP integration with Claude
-
-### Version 1.0 (Initial Release)
-
-- ✅ Basic SSH command execution
-- ✅ Simple web terminal
-- ✅ PostgreSQL backend
+**Core Features:**
+- ✅ Interactive web terminal (type, paste, scroll history)
+- ✅ Multi-server management with machine identity tracking
+- ✅ Smart output filtering (95-98% token reduction)
+- ✅ Batch script execution (10-50x faster than sequential)
+- ✅ Conversation tracking with rollback support
+- ✅ Recipe system for workflow automation
+- ✅ SFTP file transfer with compression
+- ✅ SQLite database for complete audit trail
+- ✅ Full MCP integration with Claude Desktop
+- ✅ Dual-stream architecture (full output to browser, filtered to Claude)
 
 ---
 
@@ -730,6 +775,6 @@ This project is for personal use by Tim. Not currently open source.
 
 ---
 
-**Version:** 1.2.0 (Auto-config, user data preservation)  
-**Last Updated:** December 23, 2024  
+**Version:** 1.3.1  
+**Last Updated:** February 20, 2026  
 **Maintainer:** Tim

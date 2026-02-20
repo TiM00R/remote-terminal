@@ -1,6 +1,7 @@
 """
 Filtered Output Buffer
 Extends basic buffer with smart filtering and command tracking
+FIXED: Adjust command_start_line when buffer overflows
 """
 
 import logging
@@ -26,7 +27,7 @@ class FilteredBuffer:
         self.buffer = OutputBuffer(max_lines)
         self.filter = output_filter
         self.last_command = ""
-        self.command_start_line = 0
+        self.command_start_line_absolute = 0  # Absolute line number (total lines added)
 
     def start_command(self, command: str) -> None:
         """
@@ -41,8 +42,31 @@ class FilteredBuffer:
             command: Command being executed
         """
         self.last_command = command
-        self.command_start_line = len(self.buffer.lines)
-        logger.debug(f"start_command: '{command}' at line {self.command_start_line}")
+        # Store ABSOLUTE line number (total lines ever added)
+        self.command_start_line_absolute = self.buffer.total_lines_added
+        logger.debug(f"start_command: '{command}' at absolute line {self.command_start_line_absolute}")
+
+    @property
+    def command_start_line(self) -> int:
+        """
+        Get command start line relative to current buffer
+
+        FIXED: Adjusts for buffer overflow by subtracting dropped lines
+        Returns:
+            Line index relative to current buffer (0-based)
+        """
+        buffer_offset = self.buffer.get_buffer_offset()
+        relative_start = self.command_start_line_absolute - buffer_offset
+        
+        # Ensure it's within valid range
+        if relative_start < 0:
+            logger.warning(f"command_start_line would be negative ({relative_start}), clamping to 0")
+            return 0
+        if relative_start >= len(self.buffer.lines):
+            logger.warning(f"command_start_line ({relative_start}) >= buffer size ({len(self.buffer.lines)})")
+            return len(self.buffer.lines) - 1 if self.buffer.lines else 0
+            
+        return relative_start
 
     def add(self, text: str) -> List[OutputLine]:
         """Add text to buffer"""
@@ -55,10 +79,12 @@ class FilteredBuffer:
         Returns:
             Command output as string
         """
-        if self.command_start_line >= len(self.buffer.lines):
+        start_line = self.command_start_line
+        
+        if start_line >= len(self.buffer.lines):
             return ""
 
-        return self.buffer.get_text(start=self.command_start_line)
+        return self.buffer.get_text(start=start_line)
 
     def get_filtered_output(self, command: Optional[str] = None) -> str:
         """
@@ -98,7 +124,7 @@ class FilteredBuffer:
         """Clear buffer and reset command tracking"""
         self.buffer.clear()
         self.last_command = ""
-        self.command_start_line = 0
+        self.command_start_line_absolute = 0
 
     def get_last_n(self, n: int = 100) -> List[OutputLine]:
         """Get last N lines"""
@@ -125,7 +151,8 @@ class FilteredBuffer:
         stats = self.buffer.get_stats()
         stats.update({
             'last_command': self.last_command,
-            'command_start_line': self.command_start_line,
+            'command_start_line_absolute': self.command_start_line_absolute,
+            'command_start_line_relative': self.command_start_line,
             'filter_enabled': self.filter is not None
         })
         return stats
