@@ -1,23 +1,36 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.TiM00R/remote-terminal",
-  "version": "1.2.0",  
-  "title": "Remote Terminal MCP",
-  "description": "Complete SSH terminal for Linux with AI/user control and dual-stream visibility",
-  "homepage": "https://github.com/TiM00R/remote-terminal",
-  "license": "MIT",
-  "sourceRepositoryUrl": "https://github.com/TiM00R/remote-terminal",
-  "keywords": [
-    "ssh",
-    "remote-terminal",
-    "linux",
-    "server-management",
-    "automation",
-    "devops"
-  ],
-  "distribution": {
-    "type": "githubRelease",
-    "owner": "TiM00R",
-    "repo": "remote-terminal"
-  }
+    "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+    "name": "io.github.TiM00R/remote-terminal",
+    "version": "1.3.2",
+    "title": "Remote Terminal MCP",
+    "description": "Complete SSH terminal for Linux with AI/user control and dual-stream visibility",
+    "homepage": "https://github.com/TiM00R/remote-terminal",
+    "license": "MIT",
+    "sourceRepositoryUrl": "https://github.com/TiM00R/remote-terminal",
+    "keywords": [
+        "ssh",
+        "remote-terminal",
+        "linux",
+        "server-management",
+        "automation",
+        "devops"
+    ],
+    "packages": [
+        {
+            "registryType": "pypi",
+            "identifier": "remote-terminal-mcp",
+            "version": "1.3.2",
+            "transport": {
+                "type": "stdio"
+            },
+            "environmentVariables": [
+                {
+                    "name": "REMOTE_TERMINAL_ROOT",
+                    "description": "Root directory for config files and database",
+                    "isRequired": true,
+                    "isSecret": false
+                }
+            ]
+        }
+    ]
 }

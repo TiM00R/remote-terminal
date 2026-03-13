@@ -29,7 +29,7 @@ Remove-Item -Recurse -Force dist, build, *.egg-info -ErrorAction SilentlyContinu
 
 # Build package
 Write-Host "Building package..." -ForegroundColor Yellow
-python -m build
+py -3.11 -m build
 
 Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Green
@@ -46,7 +46,7 @@ Write-Host "1. Verify package contents:" -ForegroundColor White
 Write-Host "   python -m zipfile -l .\dist\remote_terminal_mcp-$version-py3-none-any.whl | findstr config"
 Write-Host ""
 Write-Host "2. Create test environment:" -ForegroundColor White
-Write-Host "   cd D:\test_pypi_install"
+Write-Host "   cd D:\test_local_install"
 Write-Host "   python -m venv test_env"
 Write-Host "   test_env\Scripts\activate"
 Write-Host ""

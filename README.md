@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.TiM00R/remote-terminal -->
 # Remote Terminal
 
 **AI-Powered Remote Linux Server Management via MCP**
