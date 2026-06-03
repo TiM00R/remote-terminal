@@ -35,9 +35,16 @@ async def _execute_command(shared_state, config, command: str, timeout: int,
     else:
         expected_prompt = shared_state.prompt_detector.get_current_prompt()
 
-    # Start web server on first command if not already running
+    # Ensure web terminal is open - open_terminal closes old tab and opens fresh one
     if not web_server.is_running():
-        web_server.start()
+        await web_server.open_terminal()
+    elif len(web_server._ws_manager.active_websockets) == 0 and shared_state.is_connected():
+        # Server running but no browser tab - reopen
+        await web_server.open_terminal()
+        # Send newline to get fresh prompt after new tab connected
+        if shared_state.ssh_manager and shared_state.is_connected():
+            shared_state.ssh_manager.send_input('\n')
+            await asyncio.sleep(0.2)
 
     try:
         # Generate command ID

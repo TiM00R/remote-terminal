@@ -53,7 +53,39 @@ sys.stdout = _original_stdout
 
 class RemoteTerminalMCP:
     """MCP Server for Remote Terminal - Modular Version"""
-    
+
+    # Default slim_mode fallback if not set in config.yaml
+    SLIM_MODE_DEFAULT = True
+
+    # Tools hidden in SLIM_MODE - still implemented and callable if invoked directly
+    HIDDEN_TOOLS = {
+        # Hosts: rarely used management (3)
+        "add_server",
+        "remove_server",
+        "update_server",
+        # Conversations: all 6
+        "start_conversation",
+        "resume_conversation",
+        "end_conversation",
+        "get_conversation_commands",
+        "list_conversations",
+        "update_command_status",
+        # Recipes: all 7
+        "create_recipe",
+        "list_recipes",
+        "get_recipe",
+        "execute_recipe",
+        "delete_recipe",
+        "create_recipe_from_commands",
+        "update_recipe",
+        # Batch management: DB-only CRUD (5)
+        "list_batch_scripts",
+        "get_batch_script",
+        "save_batch_script",
+        "execute_script_content_by_id",
+        "delete_batch_script",
+    }
+
     def __init__(self):
         # Get the singleton shared state instance
         self._shared_state = _shared_state
@@ -71,6 +103,9 @@ class RemoteTerminalMCP:
         
         # Load configuration
         self.config = Config(str(config_path))
+
+        # Load slim_mode from config (falls back to class default if not set)
+        self.slim_mode = self.config.get('slim_mode', RemoteTerminalMCP.SLIM_MODE_DEFAULT)
         
         # Load hosts manager
         self.hosts_manager = HostsManager(str(hosts_path))
@@ -139,6 +174,10 @@ class RemoteTerminalMCP:
                     all_tools.extend(tools)
                 except Exception as e:
                     logger.error(f"Error getting tools from {module_name}: {e}", exc_info=True)
+            # Slim mode: hide tools to stay under Claude ~20 tool visibility limit
+            if self.slim_mode and self.HIDDEN_TOOLS:
+                all_tools = [t for t in all_tools if t.name not in self.HIDDEN_TOOLS]
+                logger.info(f"SLIM_MODE: publishing {len(all_tools)} tools ({len(self.HIDDEN_TOOLS)} hidden)")
             return all_tools
         
         @self.server.call_tool()

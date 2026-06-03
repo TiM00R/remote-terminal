@@ -62,6 +62,15 @@
                 if (message.type === 'terminal_output') {
                     term.write(message.data);
                 }
+                else if (message.type === 'session_superseded') {
+                    intentionalClose = true;
+                    ws.close();
+                    window.close();
+                }
+                else if (message.type === 'connection_update') {
+                    const label = document.querySelector('header .text-h6');
+                    if (label) label.textContent = 'Remote Terminal | Connected to: ' + message.server_name;
+                }
                 else if (message.type === 'connection') {
                     console.log('Connection status:', message.status);
                 }

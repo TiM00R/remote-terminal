@@ -140,6 +140,55 @@ class WebSocketManager:
 
         logger.info("Output broadcast loop stopped")
 
+    async def broadcast_raw_output(self, text: str):
+        """Inject raw text into output queue to be broadcast to all terminals"""
+        self.shared_state._handle_output(text)
+
+    async def broadcast_session_superseded(self, targets=None):
+        """
+        Broadcast session superseded to connected clients.
+        If targets is provided, only send to those specific websockets.
+        Otherwise sends to all active websockets.
+        """
+        message = {
+            'type': 'session_superseded'
+        }
+
+        with self._ws_lock:
+            send_to = targets if targets is not None else set(self.active_websockets)
+            disconnected = set()
+            for ws in send_to:
+                try:
+                    await ws.send_json(message)
+                except Exception as e:
+                    logger.debug(f"Failed to send session_superseded: {e}")
+                    disconnected.add(ws)
+
+            self.active_websockets -= disconnected
+
+    async def broadcast_connection_update(self, server_name: str):
+        """
+        Broadcast server connection change to all connected clients
+
+        Args:
+            server_name: Display name of newly connected server
+        """
+        message = {
+            'type': 'connection_update',
+            'server_name': server_name
+        }
+
+        with self._ws_lock:
+            disconnected = set()
+            for ws in self.active_websockets:
+                try:
+                    await ws.send_json(message)
+                except Exception as e:
+                    logger.debug(f"Failed to send connection update: {e}")
+                    disconnected.add(ws)
+
+            self.active_websockets -= disconnected
+
     async def broadcast_transfer_update(self, transfer_id: str, progress: dict):
         """
         Broadcast SFTP transfer progress to all connected clients

@@ -4,6 +4,7 @@ WITH WebSocket broadcast for multi-terminal synchronization
 FIXED: Proper WebSocket message handling that keeps connection alive
 """
 
+import asyncio
 import sys
 import os
 import threading
@@ -95,6 +96,35 @@ class WebTerminalServer:
         # Stop the server
         self.shared_state.web_server_running = False
         logger.info("Web terminal server stopped")
+
+    async def open_terminal(self):
+        """
+        Close all existing terminal tabs and open a fresh one.
+        If web server not running, starts it (which opens browser automatically).
+        """
+        if not self.is_running():
+            self.start()  # starts server and opens browser
+        else:
+            # Close all existing tabs
+            await self._ws_manager.broadcast_session_superseded()
+            # Open fresh tab first, then wait for WebSocket to connect
+            url = f"http://{self.config.server.host}:{self.config.server.port}"
+            webbrowser.open(url)
+            logger.info(f"Opened fresh terminal tab: {url}")
+            # Delay to allow browser tab to open and WebSocket to connect
+            await asyncio.sleep(2.0)
+
+    async def broadcast_raw_output(self, text: str):
+        """Inject raw text into output queue to be broadcast to all terminals"""
+        await self._ws_manager.broadcast_raw_output(text)
+
+    async def broadcast_session_superseded(self, targets=None):
+        """Broadcast session superseded to connected clients"""
+        await self._ws_manager.broadcast_session_superseded(targets)
+
+    async def broadcast_connection_update(self, server_name: str):
+        """Broadcast server connection change to all connected clients"""
+        await self._ws_manager.broadcast_connection_update(server_name)
 
     async def broadcast_transfer_update(self, transfer_id: str, progress: dict):
         """

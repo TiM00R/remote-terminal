@@ -47,6 +47,11 @@ async def _select_server(shared_state, hosts_manager, database, web_server, iden
     hosts_manager.set_current(identifier)
 
     # Disconnect current connection if any
+    # If already connected (server switch), print separator before disconnecting
+    if shared_state.is_connected() and web_server and web_server.is_running():
+        separator = f"\r\n\x1b[36m{'-' * 60}\x1b[0m\r\n\x1b[36m  Connecting to: {srv.user}@{srv.host} ({srv.name})\x1b[0m\r\n\x1b[36m{'-' * 60}\x1b[0m\r\n"
+        await web_server.broadcast_raw_output(separator)
+
     if shared_state.is_connected():
         shared_state.ssh_manager.disconnect()
 
@@ -58,8 +63,7 @@ async def _select_server(shared_state, hosts_manager, database, web_server, iden
         port=srv.port
     )
 
-    if not success or not shared_state.ssh_manager.connect():
-    ##if not success:
+    if not success:
         return [types.TextContent(
             type="text",
             text=json.dumps({"error": f"Failed to connect to {identifier}"})
@@ -254,6 +258,13 @@ async def _select_server(shared_state, hosts_manager, database, web_server, iden
                 "goal": conv['goal_summary'],
                 "started_at": str(conv['started_at'])
             })
+
+    # Update header to show new server
+    if web_server and web_server.is_running():
+        try:
+            await web_server.broadcast_connection_update(f"{user}@{hostname if hostname else host} ({srv.name})")
+        except Exception as e:
+            logger.warning(f"Could not broadcast connection update: {e}")
 
     # Return structured response
     return [types.TextContent(

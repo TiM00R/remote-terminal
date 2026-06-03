@@ -215,3 +215,31 @@ logging:
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # Database configuration removed - SQLite auto-configured
+
+# SLIM MODE - Tool visibility workaround
+# Claude has a known bug/limitation where it can only reliably load ~20 MCP tools.
+# When all 40 tools are published, Claude silently drops roughly half of them
+# and they become completely inaccessible - even manual prompting cannot recover them.
+# As a temporary workaround, slim_mode hides lesser-used tools so only the
+# essential 19 are published, keeping us under the ~20 tool visibility limit.
+#
+# Set to false to publish all 40 tools (expect ~20 to be invisible to AI).
+#
+# PUBLISHED (19 tools):
+#   Hosts:    list_servers, select_server, get_current_server, set_default_server
+#   Commands: execute_command, check_command_status, get_command_output,
+#             cancel_command, list_session_commands, list_command_history
+#   Info:     get_terminal_status
+#   SFTP:     upload_file, download_file, list_remote_directory,
+#             get_remote_file_info, upload_directory, download_directory
+#   Batch:    execute_script_content, build_script_from_commands
+#
+# HIDDEN (21 tools - still implemented, just not advertised to AI):
+#   Hosts:         add_server, remove_server, update_server
+#   Conversations: start_conversation, resume_conversation, end_conversation,
+#                  get_conversation_commands, list_conversations, update_command_status
+#   Recipes:       create_recipe, list_recipes, get_recipe, execute_recipe,
+#                  delete_recipe, create_recipe_from_commands, update_recipe
+#   Batch mgmt:    list_batch_scripts, get_batch_script, save_batch_script,
+#                  execute_script_content_by_id, delete_batch_script
+slim_mode: true

@@ -4,6 +4,7 @@ Tools for managing multiple server configurations
 Phase 1 Enhanced: Conversation workflow automation
 """
 
+import asyncio
 import logging
 from mcp import types
 from tools.tools_hosts_crud import (
@@ -22,6 +23,18 @@ logger = logging.getLogger(__name__)
 async def get_tools(**kwargs) -> list[types.Tool]:
     """Get list of host management tools"""
     return [
+        types.Tool(
+            name="open_terminal",
+            description="""Open the web terminal in a browser tab.
+If a terminal tab is already open, closes it and opens a fresh one.
+If the web server is not running, starts it first.
+Use this when the terminal tab has been lost or closed.
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
         types.Tool(
             name="list_servers",
             description="""List all configured servers with their details.
@@ -217,7 +230,19 @@ async def handle_call(name: str, arguments: dict, hosts_manager, ssh_manager,
                       web_server=None,  **kwargs) -> list[types.TextContent]:
     """Handle host management tool calls - Phase 1 Enhanced"""
 
-    if name == "list_servers":
+    if name == "open_terminal":
+        if web_server:
+            if not shared_state.is_connected():
+                return [types.TextContent(type="text", text='{"status": "not connected to any server"}')]
+            await web_server.open_terminal()
+            # Send newline to get fresh prompt after new tab connected
+            if shared_state.ssh_manager and shared_state.is_connected():
+                shared_state.ssh_manager.send_input('\n')
+                await asyncio.sleep(0.2)
+            return [types.TextContent(type="text", text='{"status": "terminal opened"}')]
+        return [types.TextContent(type="text", text='{"error": "web server not available"}')]
+
+    elif name == "list_servers":
         return await _list_servers(hosts_manager)
 
     elif name == "select_server":

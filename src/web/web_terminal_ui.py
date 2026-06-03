@@ -56,7 +56,4 @@ def create_terminal_page(ui, web_terminal_server):
             document.body.appendChild(script2);
         ''', timeout=1.0)
 
-        # Update connection info every 2 seconds
-        ui.timer(2.0, lambda: connection_label.set_text(
-            f'Remote Terminal | Connected to: {web_terminal_server.get_connection_display()}'
-        ))
+        # Connection label is updated via WebSocket events - no polling timer needed
