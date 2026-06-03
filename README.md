@@ -643,7 +643,29 @@ This is Tim's personal project. If you'd like to contribute:
 
 ## 📜 Version History
 
-### Version 1.3.1 (Current - February 20, 2026)
+### Version 1.3.3 (June 2026)
+
+**Web Terminal Lifecycle Management & Socket Leak Fix:**
+- ✅ Fixed double SSH connect() call in select_server (socket leak bug fix)
+- ✅ Removed ui.timer polling - replaced with WebSocket-driven header updates
+- ✅ Added `open_terminal` MCP tool - closes existing tabs, opens fresh terminal on demand
+- ✅ Terminal tab opens automatically on first command with full welcome message
+- ✅ Server switch prints visual separator line in terminal with new server name
+- ✅ Header updates dynamically via WebSocket when switching servers
+- ✅ Stale browser tabs close automatically when switching servers (session_superseded)
+- ✅ Terminal reopens automatically when tab closed mid-session (execute_command safety net)
+- ✅ Fresh prompt sent after terminal reopen via newline injection
+- ✅ Guard against opening terminal when not connected to any server
+
+### Version 1.3.2 (March 2026)
+
+**SLIM_MODE for Reduced Tool Footprint:**
+- ✅ SLIM_MODE configuration option hides rarely-used tools from Claude's tool list
+- ✅ Configurable HIDDEN_TOOLS list in mcp_server.py
+- ✅ Reduces context window usage when working with large tool counts
+- ✅ Hidden tools still callable directly, just not advertised
+
+### Version 1.3.1 (February 2026)
 
 **Prompt Detection Logging Overhaul:**
 - ✅ Production mode: 2 log lines per command (Start + Detected) instead of hundreds
@@ -776,6 +798,6 @@ This project is for personal use by Tim. Not currently open source.
 
 ---
 
-**Version:** 1.3.1  
-**Last Updated:** February 20, 2026  
+**Version:** 1.3.3  
+**Last Updated:** June 3, 2026  
 **Maintainer:** Tim
